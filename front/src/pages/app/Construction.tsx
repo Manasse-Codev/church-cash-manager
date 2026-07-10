@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Building2, Plus, Search, X } from "lucide-react";
+import { Building2, Plus, Search, X, Download } from "lucide-react";
 import { PageTitle } from "../../components/shared/PageTitle";
 import { ProgressBar } from "../../components/shared/ProgressBar";
 import { DEPENSES_CONSTRUCTION } from "../../constants/mockData";
 import type { DepenseConstruction } from "../../types";
+import { exportToExcel, exportToPDF } from "../../lib/export-utils";
 
 const BUDGET_TOTAL = 25000000;
 
@@ -27,6 +28,39 @@ export function Construction() {
   );
 
   const pct = Math.round((totalDépensé / BUDGET_TOTAL) * 100);
+
+  const handleExportExcel = () => {
+    const dataToExport = filtered.map(d => ({
+      "Date": d.date,
+      "Article": d.article,
+      "Catégorie": d.categorie,
+      "Fournisseur": d.fournisseur,
+      "Montant (FCFA)": d.montant
+    }));
+    exportToExcel({
+      data: dataToExport,
+      filename: "AD_Construction_Depenses",
+      sheetName: "Dépenses Chantier"
+    });
+  };
+
+  const handleExportPDF = () => {
+    const headers = ["Date", "Article", "Catégorie", "Fournisseur", "Montant"];
+    const rows = filtered.map(d => [
+      d.date,
+      d.article,
+      d.categorie,
+      d.fournisseur,
+      `${d.montant.toLocaleString("fr-FR")} FCFA`
+    ]);
+    exportToPDF({
+      title: "Rapport de Suivi du Chantier (Temple)",
+      subtitle: `Dépensé : ${totalDépensé.toLocaleString("fr-FR")} FCFA / Budget : ${BUDGET_TOTAL.toLocaleString("fr-FR")} FCFA (${pct}% consommé)`,
+      headers,
+      rows,
+      filename: "Rapport_AD_Chantier"
+    });
+  };
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -116,20 +150,45 @@ export function Construction() {
         </div>
       </div>
 
-      {/* Search */}
-      <div
-        className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-4"
-        style={{ background: "white", border: "1.5px solid rgba(27,63,166,0.12)" }}
-      >
-        <Search size={16} style={{ color: "#1B3FA6", flexShrink: 0 }} aria-hidden="true" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher un article ou fournisseur..."
-          className="flex-1 outline-none"
-          style={{ background: "transparent", color: "#0D1F5C", fontSize: "14px" }}
-          aria-label="Rechercher un article ou fournisseur"
-        />
+      {/* Search & Export */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <div
+          className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl min-w-[200px]"
+          style={{ background: "white", border: "1.5px solid rgba(27,63,166,0.12)" }}
+        >
+          <Search size={16} style={{ color: "#1B3FA6", flexShrink: 0 }} aria-hidden="true" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher un article ou fournisseur..."
+            className="flex-1 outline-none"
+            style={{ background: "transparent", color: "#0D1F5C", fontSize: "14px" }}
+            aria-label="Rechercher un article ou fournisseur"
+          />
+        </div>
+
+        <div className="flex gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs"
+            style={{ background: "#DCFCE7", color: "#16A34A", border: "1px solid rgba(22,163,74,0.2)" }}
+            aria-label="Exporter vers Excel"
+          >
+            <Download size={13} />
+            <span>Excel</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs"
+            style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid rgba(220,38,38,0.2)" }}
+            aria-label="Exporter au format PDF"
+          >
+            <Download size={13} />
+            <span>PDF</span>
+          </button>
+        </div>
       </div>
 
       {/* Table / Cards */}

@@ -4,6 +4,7 @@ import { PageTitle } from "../../components/shared/PageTitle";
 import { ProgressBar } from "../../components/shared/ProgressBar";
 import { INVESTISSEURS } from "../../constants/mockData";
 import type { Investisseur } from "../../types";
+import { exportToExcel, exportToPDF } from "../../lib/export-utils";
 
 const CATEGORIES = ["Tous", "Ancien", "Diacre", "Membre", "Bienfaiteur"];
 
@@ -28,6 +29,39 @@ export function Investisseurs() {
 
   const totalPromesses = INVESTISSEURS.reduce((s, i) => s + i.promesse, 0);
   const totalPayé = INVESTISSEURS.reduce((s, i) => s + i.payé, 0);
+
+  const handleExportExcel = () => {
+    const dataToExport = filtered.map(i => ({
+      "Nom complet": i.nom,
+      "Catégorie": i.categorie,
+      "Promesse (FCFA)": i.promesse,
+      "Montant Payé (FCFA)": i.payé,
+      "Reste à payer (FCFA)": i.promesse - i.payé
+    }));
+    exportToExcel({
+      data: dataToExport,
+      filename: "AD_Investisseurs_Promesses",
+      sheetName: "Investisseurs"
+    });
+  };
+
+  const handleExportPDF = () => {
+    const headers = ["Nom complet", "Catégorie", "Promesse", "Montant Payé", "Reste à payer"];
+    const rows = filtered.map(i => [
+      i.nom,
+      i.categorie,
+      `${i.promesse.toLocaleString("fr-FR")} FCFA`,
+      `${i.payé.toLocaleString("fr-FR")} FCFA`,
+      `${(i.promesse - i.payé).toLocaleString("fr-FR")} FCFA`
+    ]);
+    exportToPDF({
+      title: "Rapport des Investisseurs & Bâtisseurs",
+      subtitle: `Filtre : ${categorie} | Total Promesses : ${totalPromesses.toLocaleString("fr-FR")} FCFA | Total Payé : ${totalPayé.toLocaleString("fr-FR")} FCFA`,
+      headers,
+      rows,
+      filename: "Rapport_AD_Investisseurs"
+    });
+  };
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -58,10 +92,10 @@ export function Investisseurs() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters & Export */}
       <div className="flex gap-2 mb-4 flex-wrap">
         <div
-          className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl min-w-0"
+          className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl min-w-[200px]"
           style={{ background: "white", border: "1.5px solid rgba(27,63,166,0.12)" }}
         >
           <Search size={16} style={{ color: "#1B3FA6", flexShrink: 0 }} aria-hidden="true" />
@@ -74,6 +108,7 @@ export function Investisseurs() {
             aria-label="Rechercher un investisseur"
           />
         </div>
+
         <select
           value={categorie}
           onChange={(e) => setCategorie(e.target.value)}
@@ -90,26 +125,29 @@ export function Investisseurs() {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-      </div>
 
-      {/* Export buttons */}
-      <div className="flex gap-2 mb-4">
-        <button
-          type="button"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl"
-          style={{ background: "#EEF3FF", color: "#1B3FA6", fontWeight: 700, fontSize: "13px" }}
-        >
-          <Download size={14} />
-          PDF
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl"
-          style={{ background: "#DCFCE7", color: "#16A34A", fontWeight: 700, fontSize: "13px" }}
-        >
-          <Download size={14} />
-          Excel
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs"
+            style={{ background: "#DCFCE7", color: "#16A34A", border: "1px solid rgba(22,163,74,0.2)" }}
+            aria-label="Exporter vers Excel"
+          >
+            <Download size={13} />
+            <span>Excel</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs"
+            style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid rgba(220,38,38,0.2)" }}
+            aria-label="Exporter au format PDF"
+          >
+            <Download size={13} />
+            <span>PDF</span>
+          </button>
+        </div>
       </div>
 
       {/* Investor cards */}

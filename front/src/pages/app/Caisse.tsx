@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { TrendingUp, TrendingDown, Plus, Search, X } from "lucide-react";
+import { TrendingUp, TrendingDown, Plus, Search, X, Download } from "lucide-react";
 import { PageTitle } from "../../components/shared/PageTitle";
 import { TRANSACTIONS } from "../../constants/mockData";
 import type { Transaction } from "../../types";
+import { exportToExcel, exportToPDF } from "../../lib/export-utils";
 
 type Tab = "Tout" | "Entrées" | "Sorties";
 
@@ -24,6 +25,39 @@ export function Caisse() {
     const matchSearch = t.motif.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
   });
+
+  const handleExportExcel = () => {
+    const dataToExport = filtered.map(t => ({
+      "Date": t.date,
+      "Motif": t.motif,
+      "Montant (FCFA)": t.type === "entrée" ? t.montant : -t.montant,
+      "Type": t.type === "entrée" ? "ENTRÉE" : "SORTIE",
+      "Auteur": t.par
+    }));
+    exportToExcel({
+      data: dataToExport,
+      filename: "AD_Caisse_Transactions",
+      sheetName: "Mouvements"
+    });
+  };
+
+  const handleExportPDF = () => {
+    const headers = ["Date", "Motif", "Montant (FCFA)", "Type", "Auteur"];
+    const rows = filtered.map(t => [
+      t.date,
+      t.motif,
+      `${t.type === "entrée" ? "+" : "-"}${t.montant.toLocaleString("fr-FR")} FCFA`,
+      t.type.toUpperCase(),
+      t.par
+    ]);
+    exportToPDF({
+      title: "Rapport de Caisse AD-CI",
+      subtitle: `Filtre : ${tab} | Nombre de mouvements : ${filtered.length} | Solde : ${solde.toLocaleString("fr-FR")} FCFA`,
+      headers,
+      rows,
+      filename: "Rapport_AD_Caisse"
+    });
+  };
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -90,20 +124,45 @@ export function Caisse() {
         ))}
       </div>
 
-      {/* Search */}
-      <div
-        className="flex items-center gap-2 px-3 py-2.5 rounded-xl mb-4"
-        style={{ background: "white", border: "1.5px solid rgba(27,63,166,0.12)" }}
-      >
-        <Search size={16} style={{ color: "#1B3FA6", flexShrink: 0 }} aria-hidden="true" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher une transaction..."
-          className="flex-1 outline-none"
-          style={{ background: "transparent", color: "#0D1F5C", fontSize: "14px" }}
-          aria-label="Rechercher une transaction"
-        />
+      {/* Search & Export */}
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <div
+          className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl min-w-[200px]"
+          style={{ background: "white", border: "1.5px solid rgba(27,63,166,0.12)" }}
+        >
+          <Search size={16} style={{ color: "#1B3FA6", flexShrink: 0 }} aria-hidden="true" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher une transaction..."
+            className="flex-1 outline-none"
+            style={{ background: "transparent", color: "#0D1F5C", fontSize: "14px" }}
+            aria-label="Rechercher une transaction"
+          />
+        </div>
+
+        <div className="flex gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs"
+            style={{ background: "#DCFCE7", color: "#16A34A", border: "1px solid rgba(22,163,74,0.2)" }}
+            aria-label="Exporter vers Excel"
+          >
+            <Download size={13} />
+            <span>Excel</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all cursor-pointer font-bold text-xs"
+            style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid rgba(220,38,38,0.2)" }}
+            aria-label="Exporter au format PDF"
+          >
+            <Download size={13} />
+            <span>PDF</span>
+          </button>
+        </div>
       </div>
 
       {/* Transaction list */}
