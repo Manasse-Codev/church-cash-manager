@@ -1,14 +1,16 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "eglise-finance-frontend",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "description": "Frontend de gestion financière pour les Assemblées de Dieu de Côte d'Ivoire",
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "canvas-confetti": "1.9.4",
     "clsx": "2.1.1",
     "lucide-react": "0.487.0",
     "react": "18.3.1",

@@ -5,7 +5,7 @@ import { ProgressBar } from "../../components/shared/ProgressBar";
 import { DEPARTEMENTS } from "../../constants/mockData";
 import type { Departement } from "../../types";
 
-const ICON_MAP: Record<string, React.ComponentType<{ size: number; style?: React.CSSProperties }>> = {
+const ICON_MAP: Record<string, any> = {
   Music: Music,
   Users: Users,
   Heart: Heart,

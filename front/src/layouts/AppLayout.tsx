@@ -25,6 +25,10 @@ export function AppLayout() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden" style={{ background: "var(--background)" }}>
+      {/* Lien d'accessibilité clavier */}
+      <a href="#main-content" className="skip-to-content">
+        Aller au contenu principal
+      </a>
 
       {/* ── Sidebar Desktop ── */}
       <aside
@@ -164,7 +168,7 @@ export function AppLayout() {
         </header>
 
         {/* ── Page ── */}
-        <main className="flex-1 overflow-y-auto pb-20 md:pb-0">
+        <main id="main-content" className="flex-1 overflow-y-auto pb-20 md:pb-0">
           <Outlet />
         </main>
       </div>

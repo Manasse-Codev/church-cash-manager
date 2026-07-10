@@ -15,6 +15,11 @@ export function PublicLayout() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--background)" }}>
+      {/* Lien d'accessibilité clavier */}
+      <a href="#main-content" className="skip-to-content">
+        Aller au contenu principal
+      </a>
+
       {/* ── Navbar ── */}
       <header
         className="fixed top-0 left-0 right-0 z-50"
@@ -73,7 +78,7 @@ export function PublicLayout() {
       </header>
 
       {/* ── Contenu ── */}
-      <main className={isHome ? "" : "pt-16"}>
+      <main id="main-content" className={isHome ? "" : "pt-16"}>
         <Outlet />
       </main>
 

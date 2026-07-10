@@ -1,4 +1,3 @@
-import { Music, Users, Heart, Baby, Book, Shield } from "lucide-react";
 import type {
   Transaction,
   Membre,
@@ -70,12 +69,12 @@ export const DEPENSES_CONSTRUCTION: DepenseConstruction[] = [
 
 // ── Départements ───────────────────────────────
 export const DEPARTEMENTS: Departement[] = [
-  { id: 1, nom: "Chœur",          description: "Louange & Adoration",  icon: Music,  color: "#1B3FA6", bg: "#EEF3FF", budget: 500000, dépensé: 310000, membres: 24, transactions: [{ date: "02 Jul 2026", motif: "Achat robes de chœur",    montant: -85000 }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 150000 }] },
-  { id: 2, nom: "Jeunesse",       description: "18 – 35 ans",          icon: Users,  color: "#16A34A", bg: "#DCFCE7", budget: 800000, dépensé: 420000, membres: 48, transactions: [{ date: "01 Jul 2026", motif: "Camp jeunesse – acompte", montant: -200000 }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 200000 }] },
-  { id: 3, nom: "Femmes",         description: "Section féminine",     icon: Heart,  color: "#7C3AED", bg: "#F3E8FF", budget: 600000, dépensé: 280000, membres: 62, transactions: [{ date: "03 Jul 2026", motif: "Réunion mensuelle",      montant: -45000  }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 150000 }] },
-  { id: 4, nom: "Enfants",        description: "École du Dimanche",    icon: Baby,   color: "#D97706", bg: "#FEF3C7", budget: 400000, dépensé: 185000, membres: 35, transactions: [{ date: "06 Jul 2026", motif: "Matériel pédagogique",   montant: -35000  }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 100000 }] },
-  { id: 5, nom: "Évangélisation", description: "Mission & Évangile",   icon: Book,   color: "#0369A1", bg: "#E0F2FE", budget: 700000, dépensé: 520000, membres: 18, transactions: [{ date: "04 Jul 2026", motif: "Tracts et Bibles",       montant: -120000 }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 200000 }] },
-  { id: 6, nom: "Anciens",        description: "Conseil des anciens",  icon: Shield, color: "#475569", bg: "#F1F5F9", budget: 300000, dépensé: 90000,  membres: 8,  transactions: [{ date: "10 Jun 2026", motif: "Dotation mensuelle",    montant: 100000  }, { date: "20 Jun 2026", motif: "Repas conseil",       montant: -10000 }] },
+  { id: 1, nom: "Chœur",          description: "Louange & Adoration",  icon: "Music",  color: "#1B3FA6", bg: "#EEF3FF", budget: 500000, depense: 310000, membres: 24, transactions: [{ date: "02 Jul 2026", motif: "Achat robes de chœur",    montant: -85000 }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 150000 }] },
+  { id: 2, nom: "Jeunesse",       description: "18 – 35 ans",          icon: "Users",  color: "#16A34A", bg: "#DCFCE7", budget: 800000, depense: 420000, membres: 48, transactions: [{ date: "01 Jul 2026", motif: "Camp jeunesse – acompte", montant: -200000 }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 200000 }] },
+  { id: 3, nom: "Femmes",         description: "Section féminine",     icon: "Heart",  color: "#7C3AED", bg: "#F3E8FF", budget: 600000, depense: 280000, membres: 62, transactions: [{ date: "03 Jul 2026", motif: "Réunion mensuelle",      montant: -45000  }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 150000 }] },
+  { id: 4, nom: "Enfants",        description: "École du Dimanche",    icon: "Baby",   color: "#D97706", bg: "#FEF3C7", budget: 400000, depense: 185000, membres: 35, transactions: [{ date: "06 Jul 2026", motif: "Matériel pédagogique",   montant: -35000  }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 100000 }] },
+  { id: 5, nom: "Évangélisation", description: "Mission & Évangile",   icon: "Book",   color: "#0369A1", bg: "#E0F2FE", budget: 700000, depense: 520000, membres: 18, transactions: [{ date: "04 Jul 2026", motif: "Tracts et Bibles",       montant: -120000 }, { date: "10 Jun 2026", motif: "Dotation mensuelle", montant: 200000 }] },
+  { id: 6, nom: "Anciens",        description: "Conseil des anciens",  icon: "Shield", color: "#475569", bg: "#F1F5F9", budget: 300000, depense: 90000,  membres: 8,  transactions: [{ date: "10 Jun 2026", motif: "Dotation mensuelle",    montant: 100000  }, { date: "20 Jun 2026", motif: "Repas conseil",       montant: -10000 }] },
 ];
 
 // ── Chart data Dashboard ───────────────────────

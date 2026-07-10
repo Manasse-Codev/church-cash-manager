@@ -3,6 +3,7 @@ import { createBrowserRouter } from "react-router";
 import { PublicLayout } from "./layouts/PublicLayout";
 import { AppLayout }    from "./layouts/AppLayout";
 import { ProtectedRoute } from "./components/shared/ProtectedRoute";
+import { ErrorBoundary }  from "./components/shared/ErrorBoundary";
 import { Loader } from "./components/shared/Loader";
 
 // ── Pages publiques (lazy) ────────────────────────────────────────────
@@ -18,8 +19,11 @@ const Construction  = lazy(() => import("./pages/app/Construction").then(m => ({
 const Departements  = lazy(() => import("./pages/app/Departements").then(m => ({ default: m.Departements })));
 const Membres       = lazy(() => import("./pages/app/Membres").then(m => ({ default: m.Membres })));
 
+/** Enveloppe les composants lazy avec Suspense + ErrorBoundary. */
 const wrap = (el: React.ReactNode) => (
-  <Suspense fallback={<Loader text="Chargement de la page…" />}>{el}</Suspense>
+  <ErrorBoundary>
+    <Suspense fallback={<Loader text="Chargement de la page…" />}>{el}</Suspense>
+  </ErrorBoundary>
 );
 
 export const router = createBrowserRouter([
@@ -27,16 +31,16 @@ export const router = createBrowserRouter([
   {
     Component: PublicLayout,
     children: [
-      { path: "/",        element: wrap(<LandingPage />) },
+      { path: "/",            element: wrap(<LandingPage />) },
       { path: "/inscription", element: wrap(<InscriptionPublique />) },
     ],
   },
 
-  // ── Login (sans layout) ──
+  // ── Connexion (sans layout) ──
   { path: "/connexion", element: wrap(<LoginPage />) },
 
-  // ── Ancienne route login (compat) ──
-  { path: "/login",     element: wrap(<LoginPage />) },
+  // ── Ancienne route login (compatibilité) ──
+  { path: "/login", element: wrap(<LoginPage />) },
 
   // ── Routes app (protégées) ──
   {
@@ -52,7 +56,7 @@ export const router = createBrowserRouter([
       { path: "caisse",                element: wrap(<Caisse />) },
       { path: "construction",          element: wrap(<Construction />) },
       { path: "departements",          element: wrap(<Departements />) },
-      { path: "membres",               element: wrap(<Membres />) },
+      { path: "membres",              element: wrap(<Membres />) },
     ],
   },
 ]);

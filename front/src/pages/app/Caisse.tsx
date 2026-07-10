@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { TrendingUp, TrendingDown, Plus, Search, X } from "lucide-react";
 import { PageTitle } from "../../components/shared/PageTitle";
-import { StatCard } from "../../components/shared/StatCard";
 import { TRANSACTIONS } from "../../constants/mockData";
 import type { Transaction } from "../../types";
 

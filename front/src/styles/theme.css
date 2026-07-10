@@ -211,3 +211,63 @@
 .badge-danger  { background: var(--danger-bg);  color: var(--danger);  font-weight: 700; border-radius: 9999px; padding: 2px 10px; font-size: 0.75rem; }
 .badge-primary { background: var(--blue-muted); color: var(--blue-primary); font-weight: 700; border-radius: 9999px; padding: 2px 10px; font-size: 0.75rem; }
 .badge-gold    { background: var(--gold-light);  color: #92660A; font-weight: 700; border-radius: 9999px; padding: 2px 10px; font-size: 0.75rem; }
+
+/* ── Accessibilité : focus-visible ── */
+:focus-visible {
+  outline: 2px solid var(--blue-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Empêche l'outline sur les clics souris */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Skip to content link (navigation clavier) */
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  z-index: 9999;
+  background: var(--blue-deep);
+  color: white;
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+.skip-to-content:focus {
+  top: 16px;
+}
+
+/* ── Boutons : états disabled ── */
+.btn-primary:disabled,
+.btn-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Amélioration du scroll sur mobile ── */
+@media (max-width: 768px) {
+  html {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ── Réduction des animations pour les utilisateurs qui le préfèrent ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

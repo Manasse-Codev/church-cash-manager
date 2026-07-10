@@ -1,4 +1,3 @@
-import { type LucideIcon } from "lucide-react";
 
 // ── Transactions ──────────────────────────────
 export interface Transaction {
@@ -59,11 +58,11 @@ export interface Departement {
   id: number;
   nom: string;
   description: string;
-  icon: LucideIcon;
+  icon: string;
   color: string;
   bg: string;
   budget: number;
-  dépensé: number;
+  depense: number;
   membres: number;
   transactions: DeptTransaction[];
 }
