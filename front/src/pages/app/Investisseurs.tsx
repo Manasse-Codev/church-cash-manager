@@ -1,104 +1,17 @@
 import { useState } from "react";
-import {
-  Search,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  Plus,
-  CheckCircle,
-  Clock,
-  X,
-} from "lucide-react";
+import { Search, ChevronDown, ChevronUp, Download, Plus, CheckCircle, X } from "lucide-react";
+import { PageTitle } from "../../components/shared/PageTitle";
+import { ProgressBar } from "../../components/shared/ProgressBar";
+import { INVESTISSEURS } from "../../constants/mockData";
+import type { Investisseur } from "../../types";
 
-const investors = [
-  {
-    id: 1,
-    nom: "Frère Emmanuel Moukala",
-    categorie: "Ancien",
-    promesse: 500000,
-    payé: 350000,
-    paiements: [
-      { date: "05 Mar 2026", montant: 200000, méthode: "Mobile Money" },
-      { date: "10 Mai 2026", montant: 150000, méthode: "Espèces" },
-    ],
-  },
-  {
-    id: 2,
-    nom: "Sœur Marie-Thérèse Bilomba",
-    categorie: "Membre",
-    promesse: 300000,
-    payé: 300000,
-    paiements: [
-      { date: "01 Fév 2026", montant: 150000, méthode: "Virement" },
-      { date: "01 Avr 2026", montant: 150000, méthode: "Mobile Money" },
-    ],
-  },
-  {
-    id: 3,
-    nom: "Diacre Joseph Nzinzi",
-    categorie: "Diacre",
-    promesse: 750000,
-    payé: 200000,
-    paiements: [
-      { date: "15 Jan 2026", montant: 200000, méthode: "Espèces" },
-    ],
-  },
-  {
-    id: 4,
-    nom: "Frère Paul Malanda",
-    categorie: "Membre",
-    promesse: 150000,
-    payé: 50000,
-    paiements: [
-      { date: "20 Jun 2026", montant: 50000, méthode: "Mobile Money" },
-    ],
-  },
-  {
-    id: 5,
-    nom: "Famille Nguesso-Mbeki",
-    categorie: "Bienfaiteur",
-    promesse: 2000000,
-    payé: 1500000,
-    paiements: [
-      { date: "01 Jan 2026", montant: 500000, méthode: "Virement" },
-      { date: "01 Mar 2026", montant: 500000, méthode: "Virement" },
-      { date: "01 Jun 2026", montant: 500000, méthode: "Virement" },
-    ],
-  },
-];
+const CATEGORIES = ["Tous", "Ancien", "Diacre", "Membre", "Bienfaiteur"];
 
-const categories = ["Tous", "Ancien", "Diacre", "Membre", "Bienfaiteur"];
-
-const categoryColors: Record<string, { bg: string; text: string }> = {
-  Ancien: { bg: "#F5E0CE", text: "#C67B4B" },
-  Diacre: { bg: "#D4EDE3", text: "#2F6B4E" },
-  Membre: { bg: "#F5E8C0", text: "#8B6914" },
-  Bienfaiteur: { bg: "#E8D4F0", text: "#6B3D8A" },
-};
-
-const FabricProgressBar = ({ value }: { value: number }) => {
-  const capped = Math.min(value, 100);
-  return (
-    <div
-      className="w-full h-2 rounded-full overflow-hidden"
-      style={{ background: "rgba(198,123,75,0.15)" }}
-    >
-      <div
-        className="h-full rounded-full relative overflow-hidden"
-        style={{ width: `${capped}%`, background: "linear-gradient(90deg, #D4A843, #C67B4B)" }}
-      >
-        {/* Fabric stripe effect */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage:
-              "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.2) 3px, rgba(255,255,255,0.2) 6px)",
-          }}
-        />
-      </div>
-    </div>
-  );
+const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+  Ancien:      { bg: "#EEF3FF", text: "#1B3FA6" },
+  Diacre:      { bg: "#DCFCE7", text: "#16A34A" },
+  Membre:      { bg: "#FEF3C7", text: "#D97706" },
+  Bienfaiteur: { bg: "#F3E8FF", text: "#7E22CE" },
 };
 
 export function Investisseurs() {
@@ -107,52 +20,39 @@ export function Investisseurs() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [showPayModal, setShowPayModal] = useState<number | null>(null);
 
-  const filtered = investors.filter((inv) => {
+  const filtered = INVESTISSEURS.filter((inv) => {
     const matchSearch = inv.nom.toLowerCase().includes(search.toLowerCase());
     const matchCat = categorie === "Tous" || inv.categorie === categorie;
     return matchSearch && matchCat;
   });
 
-  const totalPromesses = investors.reduce((s, i) => s + i.promesse, 0);
-  const totalPayé = investors.reduce((s, i) => s + i.payé, 0);
+  const totalPromesses = INVESTISSEURS.reduce((s, i) => s + i.promesse, 0);
+  const totalPayé = INVESTISSEURS.reduce((s, i) => s + i.payé, 0);
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="mb-5">
-        <h1
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontWeight: 900,
-            color: "#3A3226",
-            fontSize: "24px",
-          }}
-        >
-          Investisseurs
-        </h1>
-        <p style={{ color: "#6B5744", fontSize: "13px" }}>Engagements pour la construction du temple</p>
-      </div>
+      <PageTitle title="Investisseurs" subtitle="Engagements et promesses de dons pour le temple" />
 
-      {/* Summary bar */}
+      {/* Summary card */}
       <div
         className="rounded-2xl p-4 mb-5"
         style={{
-          background: "linear-gradient(135deg, #C67B4B 0%, #D4A843 100%)",
+          background: "linear-gradient(135deg, #0D1F5C 0%, #1B3FA6 100%)",
           color: "white",
         }}
       >
         <div className="flex justify-between mb-2">
-          <span style={{ fontSize: "13px", opacity: 0.85 }}>Total promis</span>
+          <span style={{ fontSize: "13px", opacity: 0.85, fontWeight: 600 }}>Total promis</span>
           <span style={{ fontWeight: 800, fontSize: "16px" }}>
             {totalPromesses.toLocaleString("fr-FR")} FCFA
           </span>
         </div>
-        <FabricProgressBar value={(totalPayé / totalPromesses) * 100} />
+        <ProgressBar value={(totalPayé / totalPromesses) * 100} color="#D4A843" showStripes />
         <div className="flex justify-between mt-2">
           <span style={{ fontSize: "12px", opacity: 0.75 }}>
             Payé: {totalPayé.toLocaleString("fr-FR")} FCFA
           </span>
-          <span style={{ fontSize: "12px", opacity: 0.75 }}>
+          <span style={{ fontSize: "12px", opacity: 0.75, fontWeight: 700 }}>
             {Math.round((totalPayé / totalPromesses) * 100)}%
           </span>
         </div>
@@ -162,15 +62,16 @@ export function Investisseurs() {
       <div className="flex gap-2 mb-4 flex-wrap">
         <div
           className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl min-w-0"
-          style={{ background: "white", border: "1px solid rgba(198,123,75,0.2)" }}
+          style={{ background: "white", border: "1.5px solid rgba(27,63,166,0.12)" }}
         >
-          <Search size={16} style={{ color: "#C67B4B", flexShrink: 0 }} />
+          <Search size={16} style={{ color: "#1B3FA6", flexShrink: 0 }} aria-hidden="true" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher un investisseur..."
             className="flex-1 outline-none min-w-0"
-            style={{ background: "transparent", color: "#3A3226", fontSize: "14px" }}
+            style={{ background: "transparent", color: "#0D1F5C", fontSize: "14px" }}
+            aria-label="Rechercher un investisseur"
           />
         </div>
         <select
@@ -179,12 +80,13 @@ export function Investisseurs() {
           className="px-3 py-2 rounded-xl outline-none"
           style={{
             background: "white",
-            border: "1px solid rgba(198,123,75,0.2)",
-            color: "#3A3226",
+            border: "1.5px solid rgba(27,63,166,0.12)",
+            color: "#0D1F5C",
             fontSize: "14px",
           }}
+          aria-label="Filtrer par catégorie"
         >
-          {categories.map((c) => (
+          {CATEGORIES.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
@@ -193,15 +95,17 @@ export function Investisseurs() {
       {/* Export buttons */}
       <div className="flex gap-2 mb-4">
         <button
+          type="button"
           className="flex items-center gap-2 px-4 py-2 rounded-xl"
-          style={{ background: "#F5E0CE", color: "#C67B4B", fontWeight: 600, fontSize: "13px" }}
+          style={{ background: "#EEF3FF", color: "#1B3FA6", fontWeight: 700, fontSize: "13px" }}
         >
           <Download size={14} />
           PDF
         </button>
         <button
+          type="button"
           className="flex items-center gap-2 px-4 py-2 rounded-xl"
-          style={{ background: "#D4EDE3", color: "#2F6B4E", fontWeight: 600, fontSize: "13px" }}
+          style={{ background: "#DCFCE7", color: "#16A34A", fontWeight: 700, fontSize: "13px" }}
         >
           <Download size={14} />
           Excel
@@ -210,65 +114,67 @@ export function Investisseurs() {
 
       {/* Investor cards */}
       <div className="space-y-3">
-        {filtered.map((inv) => {
+        {filtered.map((inv: Investisseur) => {
           const restant = inv.promesse - inv.payé;
           const pct = Math.round((inv.payé / inv.promesse) * 100);
           const isExp = expanded === inv.id;
-          const colors = categoryColors[inv.categorie] || { bg: "#F0EBE0", text: "#6B5744" };
+          const colors = CATEGORY_COLORS[inv.categorie] || { bg: "#E8ECF4", text: "#64748B" };
           const isComplete = restant === 0;
 
           return (
             <div
               key={inv.id}
-              className="rounded-2xl overflow-hidden"
+              className="rounded-2xl overflow-hidden card-ad"
               style={{
                 background: "white",
-                border: "1px solid rgba(198,123,75,0.12)",
-                boxShadow: "0 2px 12px rgba(198,123,75,0.06)",
               }}
             >
               <button
+                type="button"
                 className="w-full text-left p-4"
                 onClick={() => setExpanded(isExp ? null : inv.id)}
               >
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span style={{ fontWeight: 700, color: "#3A3226", fontSize: "15px" }}>
+                      <span style={{ fontWeight: 800, color: "#0D1F5C", fontSize: "15px" }}>
                         {inv.nom}
                       </span>
-                      {isComplete && <CheckCircle size={14} style={{ color: "#2F6B4E" }} />}
+                      {isComplete && <CheckCircle size={15} style={{ color: "#16A34A" }} />}
                     </div>
                     <span
-                      className="inline-block px-2 py-0.5 rounded-full mt-1"
+                      className="inline-block px-2.5 py-0.5 rounded-full mt-1.5"
                       style={{ background: colors.bg, color: colors.text, fontSize: "11px", fontWeight: 700 }}
                     >
                       {inv.categorie}
                     </span>
                   </div>
-                  {isExp ? <ChevronUp size={18} style={{ color: "#6B5744", flexShrink: 0 }} /> : <ChevronDown size={18} style={{ color: "#6B5744", flexShrink: 0 }} />}
+                  {isExp
+                    ? <ChevronUp size={18} style={{ color: "#64748B", flexShrink: 0 }} />
+                    : <ChevronDown size={18} style={{ color: "#64748B", flexShrink: 0 }} />}
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   <div>
-                    <div style={{ fontSize: "10px", color: "#6B5744", fontWeight: 600 }}>PROMESSE</div>
-                    <div style={{ fontWeight: 800, color: "#3A3226", fontSize: "13px" }}>
+                    <div style={{ fontSize: "10px", color: "#64748B", fontWeight: 700 }}>PROMESSE</div>
+                    <div style={{ fontWeight: 800, color: "#0D1F5C", fontSize: "13px", marginTop: "2px" }}>
                       {inv.promesse.toLocaleString("fr-FR")}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: "10px", color: "#6B5744", fontWeight: 600 }}>PAYÉ</div>
-                    <div style={{ fontWeight: 800, color: "#2F6B4E", fontSize: "13px" }}>
+                    <div style={{ fontSize: "10px", color: "#64748B", fontWeight: 700 }}>PAYÉ</div>
+                    <div style={{ fontWeight: 800, color: "#16A34A", fontSize: "13px", marginTop: "2px" }}>
                       {inv.payé.toLocaleString("fr-FR")}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: "10px", color: "#6B5744", fontWeight: 600 }}>RESTANT</div>
+                    <div style={{ fontSize: "10px", color: "#64748B", fontWeight: 700 }}>RESTANT</div>
                     <div
                       style={{
                         fontWeight: 800,
                         fontSize: "13px",
-                        color: restant > 0 ? "#D4A843" : "#2F6B4E",
+                        marginTop: "2px",
+                        color: restant > 0 ? "#D4A843" : "#16A34A",
                       }}
                     >
                       {restant.toLocaleString("fr-FR")}
@@ -277,8 +183,12 @@ export function Investisseurs() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <FabricProgressBar value={pct} />
-                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#6B5744", flexShrink: 0 }}>{pct}%</span>
+                  <div className="flex-1">
+                    <ProgressBar value={pct} color="#1B3FA6" />
+                  </div>
+                  <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", flexShrink: 0 }}>
+                    {pct}%
+                  </span>
                 </div>
               </button>
 
@@ -286,38 +196,36 @@ export function Investisseurs() {
               {isExp && (
                 <div
                   className="px-4 pb-4 pt-0"
-                  style={{ borderTop: "1px dashed rgba(198,123,75,0.2)" }}
+                  style={{ borderTop: "1px dashed rgba(27,63,166,0.12)" }}
                 >
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#6B5744", marginBottom: "8px", marginTop: "12px" }}>
+                  <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", marginBottom: "8px", marginTop: "12px", letterSpacing: "0.05em" }}>
                     HISTORIQUE DES PAIEMENTS
                   </div>
                   <div className="space-y-2 mb-4">
                     {inv.paiements.map((p, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between py-2 px-3 rounded-xl"
-                        style={{ background: "#F5EFE4" }}
+                        className="flex items-center justify-between py-2.5 px-3 rounded-xl"
+                        style={{ background: "#EEF3FF" }}
                       >
                         <div>
-                          <div style={{ fontWeight: 600, color: "#3A3226", fontSize: "13px" }}>
+                          <div style={{ fontWeight: 700, color: "#0D1F5C", fontSize: "13px" }}>
                             {p.montant.toLocaleString("fr-FR")} FCFA
                           </div>
-                          <div style={{ fontSize: "11px", color: "#6B5744" }}>
+                          <div style={{ fontSize: "11px", color: "#64748B", marginTop: "1px" }}>
                             {p.date} · {p.méthode}
                           </div>
                         </div>
-                        <CheckCircle size={16} style={{ color: "#2F6B4E" }} />
+                        <CheckCircle size={15} style={{ color: "#16A34A" }} />
                       </div>
                     ))}
                   </div>
                   {restant > 0 && (
                     <button
+                      type="button"
                       onClick={() => setShowPayModal(inv.id)}
-                      className="w-full py-3 rounded-xl flex items-center justify-center gap-2"
+                      className="w-full py-3 rounded-xl flex items-center justify-center gap-2 btn-primary"
                       style={{
-                        background: "linear-gradient(135deg, #D4A843, #C67B4B)",
-                        color: "white",
-                        fontWeight: 700,
                         fontSize: "14px",
                       }}
                     >
@@ -334,12 +242,14 @@ export function Investisseurs() {
 
       {/* Add investor button */}
       <button
-        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+        type="button"
+        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all active:scale-95"
         style={{
-          background: "linear-gradient(135deg, #D4A843, #C67B4B)",
-          boxShadow: "0 6px 20px rgba(212,168,67,0.5)",
+          background: "linear-gradient(135deg, #0D1F5C, #1B3FA6)",
+          boxShadow: "0 6px 20px rgba(27,63,166,0.4)",
           zIndex: 40,
         }}
+        aria-label="Nouvel investisseur"
       >
         <Plus size={22} color="white" />
       </button>
@@ -348,8 +258,11 @@ export function Investisseurs() {
       {showPayModal !== null && (
         <div
           className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
-          style={{ background: "rgba(58,50,38,0.5)" }}
+          style={{ background: "rgba(13,31,92,0.6)" }}
           onClick={() => setShowPayModal(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pay-modal-title"
         >
           <div
             className="w-full max-w-sm rounded-t-3xl md:rounded-3xl p-6"
@@ -358,17 +271,18 @@ export function Investisseurs() {
           >
             <div className="flex items-center justify-between mb-5">
               <h3
+                id="pay-modal-title"
                 style={{
-                  fontFamily: "'Playfair Display', serif",
+                  fontFamily: "'Poppins', sans-serif",
                   fontWeight: 700,
-                  color: "#3A3226",
+                  color: "#0D1F5C",
                   fontSize: "18px",
                 }}
               >
                 Ajouter un paiement
               </h3>
-              <button onClick={() => setShowPayModal(null)}>
-                <X size={20} style={{ color: "#6B5744" }} />
+              <button type="button" onClick={() => setShowPayModal(null)} aria-label="Fermer la modal">
+                <X size={20} style={{ color: "#64748B" }} />
               </button>
             </div>
             <div className="space-y-3">
@@ -377,16 +291,16 @@ export function Investisseurs() {
                 { label: "Date", placeholder: "", type: "date" },
               ].map((field) => (
                 <div key={field.label}>
-                  <label style={{ fontSize: "13px", fontWeight: 600, color: "#3A3226" }}>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>
                     {field.label}
                   </label>
                   <input
                     type={field.type}
                     className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
                     style={{
-                      background: "#F5EFE4",
-                      border: "1px solid rgba(198,123,75,0.2)",
-                      color: "#3A3226",
+                      background: "#EEF3FF",
+                      border: "1.5px solid rgba(27,63,166,0.15)",
+                      color: "#0D1F5C",
                       fontSize: "15px",
                     }}
                     placeholder={field.placeholder}
@@ -394,15 +308,16 @@ export function Investisseurs() {
                 </div>
               ))}
               <div>
-                <label style={{ fontSize: "13px", fontWeight: 600, color: "#3A3226" }}>Méthode</label>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Méthode</label>
                 <select
                   className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
                   style={{
-                    background: "#F5EFE4",
-                    border: "1px solid rgba(198,123,75,0.2)",
-                    color: "#3A3226",
+                    background: "#EEF3FF",
+                    border: "1.5px solid rgba(27,63,166,0.15)",
+                    color: "#0D1F5C",
                     fontSize: "15px",
                   }}
+                  aria-label="Méthode de paiement"
                 >
                   {["Mobile Money", "Espèces", "Virement bancaire", "Chèque"].map((m) => (
                     <option key={m}>{m}</option>
@@ -411,16 +326,18 @@ export function Investisseurs() {
               </div>
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <button
+                  type="button"
                   onClick={() => setShowPayModal(null)}
                   className="py-3 rounded-xl"
-                  style={{ background: "#F0EBE0", color: "#3A3226", fontWeight: 700 }}
+                  style={{ background: "#E8ECF4", color: "#0D1F5C", fontWeight: 700 }}
                 >
                   Annuler
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowPayModal(null)}
                   className="py-3 rounded-xl"
-                  style={{ background: "linear-gradient(135deg, #D4A843, #C67B4B)", color: "white", fontWeight: 700 }}
+                  style={{ background: "linear-gradient(135deg, #0D1F5C, #1B3FA6)", color: "white", fontWeight: 700 }}
                 >
                   Enregistrer
                 </button>

@@ -1,6 +1,3 @@
-import { RouterProvider } from "react-router";
-import { router } from "./routes";
-
-export default function App() {
-  return <RouterProvider router={router} />;
-}
+// Ce fichier est conservé pour compatibilité.
+// L'application est désormais pilotée par src/App.tsx → src/routes.tsx
+export { default } from "../App";

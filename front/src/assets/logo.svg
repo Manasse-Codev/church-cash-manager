@@ -1,0 +1,79 @@
+<svg viewBox="0 0 240 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo officiel des Assemblées de Dieu">
+  <title>Logo Assemblées de Dieu</title>
+  
+  <!-- En-tête : ASSEMBLEES DE DIEU -->
+  <rect x="2" y="2" width="236" height="36" fill="none" stroke="#1B3FA6" stroke-width="2.5" />
+  <text x="120" y="27" font-family="'Arial Black', Impact, sans-serif" font-size="20" font-weight="900" fill="#1B3FA6" text-anchor="middle" letter-spacing="0.5">ASSEMBLEES DE DIEU</text>
+
+  <!-- Bouclier blanc avec bordure bleue -->
+  <path d="M 2 40 L 2 110 C 2 170, 50 206, 120 206 C 190 206, 238 170, 238 110 L 238 40 Z" fill="white" stroke="#1B3FA6" stroke-width="2.5" stroke-linejoin="miter" />
+
+  <!-- Bible Ouverte (haut gauche) -->
+  <g transform="translate(6, 48)" stroke="#1B3FA6" stroke-linejoin="round">
+    <!-- Contour de fond / Épaisseur du livre -->
+    <path d="M 6 12 L 36 17 L 66 12 L 66 54 C 36 62, 36 62, 6 54 Z" fill="#EEF3FF" stroke-width="1.5" />
+    <path d="M 8 10 L 36 15 L 64 10 L 64 52 C 36 60, 36 60, 8 52 Z" fill="white" stroke-width="1.5" />
+    
+    <!-- Ligne de séparation médiane -->
+    <line x1="36" y1="15" x2="36" y2="60" stroke-width="1.5" />
+
+    <!-- Textes Tout l'Evangile -->
+    <text x="21" y="28" font-family="'Georgia', serif" font-size="10" font-weight="bold" fill="#1B3FA6" text-anchor="middle" transform="rotate(7, 21, 28)" stroke="none">Tout l'</text>
+    <text x="21" y="42" font-family="'Georgia', serif" font-size="10" font-weight="bold" fill="#1B3FA6" text-anchor="middle" transform="rotate(7, 21, 42)" stroke="none">Evangile</text>
+  </g>
+
+  <!-- Monogramme AD calligraphié et entrelacé -->
+  <g transform="translate(18, 45)" fill="#1B3FA6">
+    <!-- Jambe gauche du A -->
+    <path d="M 45 110 
+             C 40 100, 40 85, 50 75 
+             C 60 65, 72 45, 80 30 
+             C 83 25, 87 15, 84 10 
+             C 81 7, 75 12, 70 15 
+             L 67 10 
+             C 75 2, 90 -5, 98 5 
+             C 103 12, 100 25, 95 35 
+             L 68 95 
+             C 65 102, 70 105, 78 102 
+             C 86 99, 92 105, 88 112 
+             C 83 120, 60 125, 50 120 
+             C 45 117, 45 112, 45 110 Z" />
+             
+    <!-- Jambe droite épaisse du A qui descend et s'entrelace avec le D -->
+    <path d="M 95 35 
+             L 125 95 
+             C 130 105, 135 112, 130 120 
+             C 125 128, 112 130, 100 125 
+             L 95 120 
+             C 108 122, 118 120, 116 110 
+             L 90 55 
+             Z" />
+             
+    <!-- Barre transversale du A -->
+    <path d="M 72 85 C 80 82, 92 82, 100 85 C 102 89, 96 94, 90 94 C 82 94, 75 90, 72 85 Z" />
+
+    <!-- Le D majuscule calligraphique -->
+    <!-- Barre verticale du D -->
+    <path d="M 115 30 
+             C 118 22, 130 18, 135 25 
+             C 140 32, 130 50, 125 65 
+             L 110 110 
+             C 107 118, 112 122, 120 120 
+             C 128 118, 132 124, 128 130 
+             C 124 136, 105 138, 98 130 
+             C 93 122, 100 112, 105 105 
+             L 120 45 
+             C 122 38, 118 34, 115 30 Z" />
+             
+    <!-- Grande boucle extérieure du D -->
+    <path d="M 123 33 
+             C 145 25, 180 35, 195 65 
+             C 210 95, 205 128, 175 142 
+             C 150 154, 118 148, 105 135 
+             C 100 130, 105 124, 112 127 
+             C 125 137, 150 142, 168 132 
+             C 188 122, 195 95, 182 70 
+             C 170 48, 145 40, 123 45 
+             Z" />
+  </g>
+</svg>
