@@ -3,7 +3,7 @@
 # ══════════════════════════════════════════════════════════════════════════════
 
 services:
-  # ── API NestJS ──────────────────────────────────────────────────────────────
+  # ── API NestJS (Docker service) ─────────────────────────────────────────────
   - type: web
     name: eglise-finance-api
     runtime: docker
@@ -30,12 +30,10 @@ services:
         value: "100"
 
   # ── Frontend (Site statique) ────────────────────────────────────────────────
-  - type: web
+  - type: static
     name: eglise-finance-front
-    runtime: static
     buildCommand: cd front && npm ci && npx vite build
     staticPublishPath: front/dist
-    plan: free
     envVars:
       - key: VITE_API_URL
         sync: false  # À remplir avec l'URL de l'API Render
