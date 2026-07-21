@@ -5,11 +5,9 @@ services:
     container_name: eglise_finance_db_prod
     restart: always
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: eglise_finance
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata_prod:/var/lib/postgresql/data
     healthcheck:
@@ -17,6 +15,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - backend
 
   # ── API NestJS ──────────────────────────────────────────────────────────────
   api:
@@ -25,20 +25,40 @@ services:
       dockerfile: Dockerfile
     container_name: eglise_finance_api_prod
     restart: always
-    ports:
-      - "4000:4000"
     environment:
-      DATABASE_URL: "postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/eglise_finance?schema=public"
+      DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/eglise_finance?schema=public"
       JWT_SECRET: ${JWT_SECRET:-eglise-finance-prod-super-secret-key-change-me}
       JWT_EXPIRES_IN: "24h"
       API_PORT: 4000
       NODE_ENV: production
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
       THROTTLE_TTL: 60
       THROTTLE_LIMIT: 100
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - backend
+
+  # ── Frontend (Vite + Nginx) ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+    container_name: eglise_finance_front_prod
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    networks:
+      - backend
+
+networks:
+  backend:
+    name: eglise_finance_network
 
 volumes:
   pgdata_prod:
