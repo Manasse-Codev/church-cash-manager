@@ -1,28 +1,62 @@
-import { useState } from "react";
-import { TrendingUp, TrendingDown, Plus, Search, X, Download } from "lucide-react";
+import { useState, useEffect } from "react";
+import { TrendingUp, TrendingDown, Plus, Search, X, Download, Trash2 } from "lucide-react";
 import { PageTitle } from "../../components/shared/PageTitle";
-import { TRANSACTIONS } from "../../constants/mockData";
 import type { Transaction } from "../../types";
 import { exportToExcel, exportToPDF } from "../../lib/export-utils";
+import { api } from "../../lib/api-client";
+import { useAuthStore } from "../../stores/auth.store";
 
 type Tab = "Tout" | "Entrées" | "Sorties";
 
 export function Caisse() {
+  const user = useAuthStore((s) => s.user);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tab, setTab] = useState<Tab>("Tout");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  
+  // États formulaire
   const [newType, setNewType] = useState<"entrée" | "sortie">("entrée");
+  const [motif, setMotif] = useState("");
+  const [montant, setMontant] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [note, setNote] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const solde = TRANSACTIONS.reduce((s, t) => s + (t.type === "entrée" ? t.montant : -t.montant), 0);
-  const totalEntrées = TRANSACTIONS.filter(t => t.type === "entrée").reduce((s, t) => s + t.montant, 0);
-  const totalSorties = TRANSACTIONS.filter(t => t.type === "sortie").reduce((s, t) => s + t.montant, 0);
+  const fetchTransactions = async () => {
+    try {
+      const response = await api.get<any>("/caisse/mouvements");
+      const formatted: Transaction[] = (response.data || []).map((t: any) => ({
+        id: t.id,
+        date: t.date,
+        rawDate: t.date,
+        motif: t.motif,
+        montant: t.montant,
+        type: t.type.toLowerCase() as "entrée" | "sortie",
+        par: t.par,
+        note: t.note,
+      }));
+      setTransactions(formatted);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des transactions de caisse", error);
+    }
+  };
 
-  const filtered = TRANSACTIONS.filter((t) => {
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const solde = transactions.reduce((s, t) => s + (t.type === "entrée" ? t.montant : -t.montant), 0);
+  const totalEntrées = transactions.filter(t => t.type === "entrée").reduce((s, t) => s + t.montant, 0);
+  const totalSorties = transactions.filter(t => t.type === "sortie").reduce((s, t) => s + t.montant, 0);
+
+  const filtered = transactions.filter((t) => {
     const matchTab =
       tab === "Tout" ||
       (tab === "Entrées" && t.type === "entrée") ||
       (tab === "Sorties" && t.type === "sortie");
-    const matchSearch = t.motif.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = t.motif.toLowerCase().includes(search.toLowerCase()) || 
+      (t.note?.toLowerCase().includes(search.toLowerCase()) ?? false);
     return matchTab && matchSearch;
   });
 
@@ -32,7 +66,8 @@ export function Caisse() {
       "Motif": t.motif,
       "Montant (FCFA)": t.type === "entrée" ? t.montant : -t.montant,
       "Type": t.type === "entrée" ? "ENTRÉE" : "SORTIE",
-      "Auteur": t.par
+      "Auteur": t.par,
+      "Note": t.note || ""
     }));
     exportToExcel({
       data: dataToExport,
@@ -57,6 +92,46 @@ export function Caisse() {
       rows,
       filename: "Rapport_AD_Caisse"
     });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!motif.trim() || !montant || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.post("/caisse/mouvements", {
+        motif: motif.trim(),
+        montant: parseFloat(montant),
+        type: newType === "entrée" ? "ENTREE" : "SORTIE",
+        date: new Date(date).toISOString(),
+        par: user?.nom ?? "Admin",
+        note: note.trim() || undefined,
+      });
+
+      // Réinitialiser
+      setMotif("");
+      setMontant("");
+      setDate(new Date().toISOString().split("T")[0]);
+      setNote("");
+      setShowModal(false);
+      await fetchTransactions();
+    } catch (error) {
+      alert("Erreur lors de la création de la transaction");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Voulez-vous vraiment supprimer cette transaction ?")) return;
+
+    try {
+      await api.delete(`/caisse/mouvements/${id}`);
+      await fetchTransactions();
+    } catch (error) {
+      alert("Erreur lors de la suppression de la transaction");
+    }
   };
 
   return (
@@ -110,7 +185,7 @@ export function Caisse() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className="flex-1 py-2 rounded-lg transition-all"
+            className="flex-1 py-2 rounded-lg transition-all cursor-pointer"
             style={{
               background: tab === t ? "white" : "transparent",
               color: tab === t ? "#1B3FA6" : "#64748B",
@@ -177,7 +252,7 @@ export function Caisse() {
           return (
             <div
               key={tx.id}
-              className="flex items-center gap-3 px-4 py-3.5"
+              className="flex items-center gap-3 px-4 py-3.5 group"
               style={{
                 borderBottom: i < filtered.length - 1 ? "1px solid rgba(27,63,166,0.07)" : "none",
               }}
@@ -197,7 +272,7 @@ export function Caisse() {
                   {tx.motif}
                 </div>
                 <div style={{ fontSize: "11px", color: "#64748B" }}>
-                  {tx.date} · {tx.par}
+                  {tx.date} · {tx.par} {tx.note && <span className="italic">({tx.note})</span>}
                 </div>
               </div>
               <div
@@ -210,6 +285,14 @@ export function Caisse() {
               >
                 {isIncome ? "+" : "-"}{Math.abs(tx.montant).toLocaleString("fr-FR")}
               </div>
+              <button
+                type="button"
+                onClick={() => handleDelete(tx.id)}
+                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 rounded-lg text-red-500 transition-all cursor-pointer"
+                title="Supprimer la transaction"
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           );
         })}
@@ -225,7 +308,7 @@ export function Caisse() {
       <button
         type="button"
         onClick={() => setShowModal(true)}
-        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 flex items-center gap-2 px-5 py-4 rounded-2xl shadow-lg transition-all active:scale-95"
+        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 flex items-center gap-2 px-5 py-4 rounded-2xl shadow-lg transition-all active:scale-95 cursor-pointer"
         style={{
           background: "linear-gradient(135deg, #0D1F5C, #1B3FA6)",
           color: "white",
@@ -249,7 +332,8 @@ export function Caisse() {
           aria-modal="true"
           aria-labelledby="tx-modal-title"
         >
-          <div
+          <form
+            onSubmit={handleSubmit}
             className="w-full max-w-sm rounded-t-3xl md:rounded-3xl p-6"
             style={{ background: "white" }}
             onClick={(e) => e.stopPropagation()}
@@ -266,7 +350,7 @@ export function Caisse() {
               >
                 Nouvelle transaction
               </h3>
-              <button type="button" onClick={() => setShowModal(false)} aria-label="Fermer la modal">
+              <button type="button" onClick={() => setShowModal(false)} aria-label="Fermer la modal" className="cursor-pointer">
                 <X size={20} style={{ color: "#64748B" }} />
               </button>
             </div>
@@ -278,7 +362,7 @@ export function Caisse() {
                   key={t}
                   type="button"
                   onClick={() => setNewType(t)}
-                  className="flex-1 py-2 rounded-lg transition-all capitalize"
+                  className="flex-1 py-2 rounded-lg transition-all capitalize cursor-pointer"
                   style={{
                     background: newType === t ? (t === "entrée" ? "#DCFCE7" : "#FEE2E2") : "transparent",
                     color: newType === t ? (t === "entrée" ? "#16A34A" : "#DC2626") : "#64748B",
@@ -292,48 +376,94 @@ export function Caisse() {
             </div>
 
             <div className="space-y-3">
-              {[
-                { label: "Motif", placeholder: "Ex: Offrande du dimanche", type: "text" },
-                { label: "Montant (FCFA)", placeholder: "0", type: "number" },
-                { label: "Date", placeholder: "", type: "date" },
-              ].map((field) => (
-                <div key={field.label}>
-                  <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>
-                    {field.label}
-                  </label>
-                  <input
-                    type={field.type}
-                    className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
-                    style={{
-                      background: "#EEF3FF",
-                      border: "1.5px solid rgba(27,63,166,0.15)",
-                      color: "#0D1F5C",
-                      fontSize: "15px",
-                    }}
-                    placeholder={field.placeholder}
-                  />
-                </div>
-              ))}
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Motif</label>
+                <input
+                  type="text"
+                  required
+                  value={motif}
+                  onChange={(e) => setMotif(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{
+                    background: "#EEF3FF",
+                    border: "1.5px solid rgba(27,63,166,0.15)",
+                    color: "#0D1F5C",
+                    fontSize: "15px",
+                  }}
+                  placeholder="Ex: Offrande du dimanche"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Montant (FCFA)</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={montant}
+                  onChange={(e) => setMontant(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{
+                    background: "#EEF3FF",
+                    border: "1.5px solid rgba(27,63,166,0.15)",
+                    color: "#0D1F5C",
+                    fontSize: "15px",
+                  }}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Date</label>
+                <input
+                  type="date"
+                  required
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{
+                    background: "#EEF3FF",
+                    border: "1.5px solid rgba(27,63,166,0.15)",
+                    color: "#0D1F5C",
+                    fontSize: "15px",
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Note (optionnelle)</label>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{
+                    background: "#EEF3FF",
+                    border: "1.5px solid rgba(27,63,166,0.15)",
+                    color: "#0D1F5C",
+                    fontSize: "15px",
+                  }}
+                  placeholder="Ex: Donateur anonyme"
+                />
+              </div>
+              
               <div className="grid grid-cols-2 gap-3 mt-4">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="py-3 rounded-xl"
+                  className="py-3 rounded-xl cursor-pointer"
                   style={{ background: "#E8ECF4", color: "#0D1F5C", fontWeight: 700 }}
                 >
                   Annuler
                 </button>
                 <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="py-3 rounded-xl"
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="py-3 rounded-xl cursor-pointer"
                   style={{ background: "linear-gradient(135deg, #0D1F5C, #1B3FA6)", color: "white", fontWeight: 700 }}
                 >
-                  Enregistrer
+                  {isSubmitting ? "Enregistrement..." : "Enregistrer"}
                 </button>
               </div>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

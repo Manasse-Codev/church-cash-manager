@@ -7,6 +7,7 @@ export interface Transaction {
   montant: number;
   type: "entrée" | "sortie";
   par: string;
+  note?: string;
 }
 
 // ── Membres ───────────────────────────────────

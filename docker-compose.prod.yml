@@ -1,0 +1,45 @@
+services:
+  # ── Base de données PostgreSQL ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: eglise_finance_db_prod
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: eglise_finance
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d eglise_finance"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── API NestJS ──────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: eglise_finance_api_prod
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:${DB_PASSWORD:-postgres}@postgres:5432/eglise_finance?schema=public"
+      JWT_SECRET: ${JWT_SECRET:-eglise-finance-prod-super-secret-key-change-me}
+      JWT_EXPIRES_IN: "24h"
+      API_PORT: 4000
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      THROTTLE_TTL: 60
+      THROTTLE_LIMIT: 100
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata_prod:
+    name: eglise_finance_pgdata_prod

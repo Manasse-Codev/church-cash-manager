@@ -1,0 +1,168 @@
+// ── EgliseFinance — Schéma Prisma complet ─────────────────────────────────────
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  GESTIONNAIRE
+  LECTEUR
+}
+
+enum TypeMouvement {
+  ENTREE
+  SORTIE
+}
+
+// ── Utilisateurs ─────────────────────────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  nom          String
+  passwordHash String
+  role         Role     @default(GESTIONNAIRE)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+// ── Caisse générale ───────────────────────────────────────────────────────────
+
+model MouvementCaisse {
+  id        Int           @id @default(autoincrement())
+  date      DateTime
+  motif     String
+  montant   Float
+  type      TypeMouvement
+  par       String
+  note      String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([date])
+  @@index([type])
+  @@map("mouvements_caisse")
+}
+
+// ── Investisseurs ─────────────────────────────────────────────────────────────
+
+model Investisseur {
+  id         Int                     @id @default(autoincrement())
+  nom        String
+  categorie  String
+  promesse   Float
+  note       String?
+  versements VersementInvestisseur[]
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  @@index([categorie])
+  @@map("investisseurs")
+}
+
+model VersementInvestisseur {
+  id             Int          @id @default(autoincrement())
+  investisseur   Investisseur @relation(fields: [investisseurId], references: [id], onDelete: Cascade)
+  investisseurId Int
+  date           DateTime
+  montant        Float
+  methode        String
+  note           String?
+  createdAt      DateTime     @default(now())
+
+  @@index([investisseurId])
+  @@map("versements_investisseur")
+}
+
+// ── Construction du temple ────────────────────────────────────────────────────
+
+model DepenseConstruction {
+  id          Int      @id @default(autoincrement())
+  date        DateTime
+  article     String
+  montant     Float
+  fournisseur String
+  categorie   String
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@index([categorie])
+  @@map("depenses_construction")
+}
+
+model BudgetConstruction {
+  id        Int      @id @default(1)
+  montant   Float    @default(25000000)
+  updatedAt DateTime @updatedAt
+
+  @@map("budget_construction")
+}
+
+// ── Départements ──────────────────────────────────────────────────────────────
+
+model Departement {
+  id          Int                    @id @default(autoincrement())
+  nom         String                 @unique
+  description String
+  icon        String
+  color       String
+  bg          String
+  budget      Float
+  membres     Int                    @default(0)
+  mouvements  MouvementDepartement[]
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@map("departements")
+}
+
+model MouvementDepartement {
+  id            Int         @id @default(autoincrement())
+  departement   Departement @relation(fields: [departementId], references: [id], onDelete: Cascade)
+  departementId Int
+  date          DateTime
+  motif         String
+  montant       Float
+  note          String?
+  createdAt     DateTime    @default(now())
+
+  @@index([departementId])
+  @@map("mouvements_departement")
+}
+
+// ── Membres ───────────────────────────────────────────────────────────────────
+
+model Membre {
+  id               Int      @id @default(autoincrement())
+  nom              String
+  prenom           String
+  categorie        String
+  telephone        String
+  champsDynamiques Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([categorie])
+  @@map("membres")
+}
+
+model MembreFormConfig {
+  id        Int      @id @default(1)
+  champs    Json
+  linkToken String   @unique @default(uuid())
+  updatedAt DateTime @updatedAt
+
+  @@map("membre_form_configs")
+}

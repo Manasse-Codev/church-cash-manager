@@ -1,29 +1,130 @@
-import { useState } from "react";
-import { CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
 import { Link } from "react-router";
 import logoPng from "../../img/image.png";
 
-const CATEGORIES = ["Membre", "Diacre", "Ancien", "Jeunesse", "Bienfaiteur"];
-
-type FormData = { nom: string; prénom: string; téléphone: string; catégorie: string };
-
 export function InscriptionPublique() {
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [invalidToken, setInvalidToken] = useState(false);
+  const [fields, setFields] = useState<any[]>([]);
+  
+  // États formulaire
+  const [form, setForm] = useState<Record<string, string>>({
+    nom: "",
+    prenom: "",
+    telephone: "",
+    categorie: "Membre"
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState<FormData>({ nom: "", prénom: "", téléphone: "", catégorie: "Membre" });
-  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const urlToken = new URLSearchParams(window.location.search).get("token");
+    setToken(urlToken);
+    
+    if (!urlToken) {
+      setInvalidToken(true);
+      setLoading(false);
+      return;
+    }
+
+    // Charger la configuration du formulaire publique
+    const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+    fetch(`${API_BASE_URL}/membres/form-config/public/${urlToken}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Lien invalide");
+        return res.json();
+      })
+      .then((json) => {
+        // Le backend retourne la config qui enveloppe les champs dans un intercepteur global (TransformInterceptor) ou brut
+        const config = json.data || json;
+        const champs = config.champs || [];
+        setFields(champs);
+        
+        // Initialiser les états du formulaire
+        const initialForm: Record<string, string> = {
+          nom: "",
+          prenom: "",
+          telephone: "",
+          categorie: "Membre"
+        };
+        champs.forEach((f: any) => {
+          const key = f.label.toLowerCase().replace(/é/g, "e").replace(/â/g, "a");
+          if (!["nom", "prenom", "telephone", "categorie"].includes(key)) {
+            initialForm[f.label] = "";
+          }
+        });
+        setForm(initialForm);
+        setLoading(false);
+      })
+      .catch(() => {
+        setInvalidToken(true);
+        setLoading(false);
+      });
+  }, []);
 
   const validate = () => {
-    const e: Partial<FormData> = {};
-    if (!form.nom.trim())       e.nom       = "Le nom est requis.";
-    if (!form.prénom.trim())    e.prénom    = "Le prénom est requis.";
-    if (!form.téléphone.trim()) e.téléphone = "Le téléphone est requis.";
+    const e: Record<string, string> = {};
+    if (!form.nom?.trim()) e.nom = "Le nom est requis.";
+    if (!form.prenom?.trim()) e.prenom = "Le prénom est requis.";
+    if (!form.telephone?.trim()) e.telephone = "Le téléphone est requis.";
+    
+    // Valider les autres champs requis
+    fields.forEach((f) => {
+      const key = f.label.toLowerCase().replace(/é/g, "e").replace(/â/g, "a");
+      if (!["nom", "prenom", "telephone", "categorie"].includes(key) && f.required) {
+        if (!form[f.label]?.trim()) {
+          e[f.label] = `${f.label} est requis.`;
+        }
+      }
+    });
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) setSubmitted(true);
+    if (!validate() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    
+    // Extraire les champs dynamiques
+    const dynamicFields: Record<string, string> = {};
+    Object.keys(form).forEach((k) => {
+      if (!["nom", "prenom", "telephone", "categorie"].includes(k)) {
+        dynamicFields[k] = form[k];
+      }
+    });
+
+    const payload = {
+      nom: form.nom,
+      prenom: form.prenom,
+      telephone: form.telephone,
+      categorie: form.categorie,
+      champsDynamiques: dynamicFields,
+    };
+
+    const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+    fetch(`${API_BASE_URL}/membres/public/${token}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Erreur d'inscription");
+        setSubmitted(true);
+      })
+      .catch(() => {
+        alert("Une erreur est survenue lors de l'inscription.");
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
 
   const fieldStyle = {
@@ -37,6 +138,8 @@ export function InscriptionPublique() {
     outline: "none",
     fontWeight: 500,
   };
+
+  const CATEGORIES_OPTIONS = ["Membre", "Diacre", "Ancien", "Jeunesse", "Bienfaiteur"];
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative" style={{ background: "linear-gradient(160deg, var(--blue-deep) 0%, var(--blue-primary) 50%, var(--blue-accent) 100%)" }}>
@@ -73,32 +176,81 @@ export function InscriptionPublique() {
 
         <div style={{ height: "1px", background: "linear-gradient(90deg, transparent, var(--border), transparent)", margin: "0 24px" }} />
 
-        {!submitted ? (
+        {loading ? (
+          <div className="p-12 text-center flex flex-col items-center gap-3">
+            <Loader2 className="animate-spin text-blue-600" size={32} />
+            <p className="text-gray-500 text-sm font-semibold">Chargement du formulaire...</p>
+          </div>
+        ) : invalidToken ? (
+          <div className="px-8 py-10 text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto" style={{ background: "#FEE2E2" }}>
+              <AlertTriangle size={32} style={{ color: "#DC2626" }} />
+            </div>
+            <h2 className="text-red-600 font-extrabold text-lg">Lien invalide ou expiré</h2>
+            <p className="text-gray-500 text-sm leading-relaxed">
+              Ce lien d'inscription n'est plus actif. Veuillez vous rapprocher d'un administrateur de l'église pour obtenir un nouveau lien.
+            </p>
+          </div>
+        ) : !submitted ? (
           <form onSubmit={handleSubmit} className="px-8 pb-10 pt-6 space-y-4" noValidate>
-            {[
-              { key: "nom",        label: "Nom",      placeholder: "Votre nom de famille", type: "text" },
-              { key: "prénom",     label: "Prénom",   placeholder: "Votre prénom",         type: "text" },
-              { key: "téléphone",  label: "Téléphone", placeholder: "+225 07 XX XX XX XX",   type: "tel"  },
-            ].map((f) => (
-              <div key={f.key} className="space-y-1.5">
-                <label htmlFor={`inp-${f.key}`} style={{ fontSize: "13px", fontWeight: 700, color: "var(--blue-deep)", display: "block" }}>
-                  {f.label} <span style={{ color: "var(--danger)" }}>*</span>
-                </label>
-                <input
-                  id={`inp-${f.key}`}
-                  type={f.type}
-                  required
-                  value={form[f.key as keyof FormData]}
-                  onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                  placeholder={f.placeholder}
-                  style={{ ...fieldStyle, borderColor: errors[f.key as keyof FormData] ? "var(--danger)" : "var(--border)" }}
-                />
-                {errors[f.key as keyof FormData] && (
-                  <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "2px", fontWeight: 600 }}>{errors[f.key as keyof FormData]}</p>
-                )}
-              </div>
-            ))}
+            {/* Prénom */}
+            <div className="space-y-1.5">
+              <label htmlFor="inp-prenom" style={{ fontSize: "13px", fontWeight: 700, color: "var(--blue-deep)", display: "block" }}>
+                Prénom <span style={{ color: "var(--danger)" }}>*</span>
+              </label>
+              <input
+                id="inp-prenom"
+                type="text"
+                required
+                value={form.prenom}
+                onChange={(e) => setForm({ ...form, prenom: e.target.value })}
+                placeholder="Votre prénom"
+                style={{ ...fieldStyle, borderColor: errors.prenom ? "var(--danger)" : "var(--border)" }}
+              />
+              {errors.prenom && (
+                <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "2px", fontWeight: 600 }}>{errors.prenom}</p>
+              )}
+            </div>
 
+            {/* Nom */}
+            <div className="space-y-1.5">
+              <label htmlFor="inp-nom" style={{ fontSize: "13px", fontWeight: 700, color: "var(--blue-deep)", display: "block" }}>
+                Nom de famille <span style={{ color: "var(--danger)" }}>*</span>
+              </label>
+              <input
+                id="inp-nom"
+                type="text"
+                required
+                value={form.nom}
+                onChange={(e) => setForm({ ...form, nom: e.target.value })}
+                placeholder="Votre nom"
+                style={{ ...fieldStyle, borderColor: errors.nom ? "var(--danger)" : "var(--border)" }}
+              />
+              {errors.nom && (
+                <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "2px", fontWeight: 600 }}>{errors.nom}</p>
+              )}
+            </div>
+
+            {/* Téléphone */}
+            <div className="space-y-1.5">
+              <label htmlFor="inp-telephone" style={{ fontSize: "13px", fontWeight: 700, color: "var(--blue-deep)", display: "block" }}>
+                Téléphone <span style={{ color: "var(--danger)" }}>*</span>
+              </label>
+              <input
+                id="inp-telephone"
+                type="tel"
+                required
+                value={form.telephone}
+                onChange={(e) => setForm({ ...form, telephone: e.target.value })}
+                placeholder="Ex: +225 07 00 00 00 00"
+                style={{ ...fieldStyle, borderColor: errors.telephone ? "var(--danger)" : "var(--border)" }}
+              />
+              {errors.telephone && (
+                <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "2px", fontWeight: 600 }}>{errors.telephone}</p>
+              )}
+            </div>
+
+            {/* Catégorie */}
             <div className="space-y-1.5">
               <label htmlFor="inp-categorie" style={{ fontSize: "13px", fontWeight: 700, color: "var(--blue-deep)", display: "block" }}>
                 Catégorie <span style={{ color: "var(--danger)" }}>*</span>
@@ -106,16 +258,40 @@ export function InscriptionPublique() {
               <select
                 id="inp-categorie"
                 required
-                value={form.catégorie}
-                onChange={(e) => setForm({ ...form, catégorie: e.target.value })}
+                value={form.categorie}
+                onChange={(e) => setForm({ ...form, categorie: e.target.value })}
                 style={fieldStyle}
               >
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                {CATEGORIES_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
 
-            <button type="submit" className="w-full btn-primary py-3.5 rounded-xl border-none" style={{ minHeight: "52px", boxShadow: "0 8px 24px rgba(0, 32, 194, 0.2)" }}>
-              S'inscrire
+            {/* Champs dynamiques supplémentaires */}
+            {fields.filter(f => {
+              const k = f.label.toLowerCase().replace(/é/g, "e").replace(/â/g, "a");
+              return !["nom", "prenom", "telephone", "categorie"].includes(k);
+            }).map((f) => (
+              <div key={f.label} className="space-y-1.5">
+                <label htmlFor={`inp-${f.label}`} style={{ fontSize: "13px", fontWeight: 700, color: "var(--blue-deep)", display: "block" }}>
+                  {f.label} {f.required && <span style={{ color: "var(--danger)" }}>*</span>}
+                </label>
+                <input
+                  id={`inp-${f.label}`}
+                  type={f.type}
+                  required={f.required}
+                  value={form[f.label] || ""}
+                  onChange={(e) => setForm({ ...form, [f.label]: e.target.value })}
+                  placeholder={`Entrez votre ${f.label.toLowerCase()}`}
+                  style={{ ...fieldStyle, borderColor: errors[f.label] ? "var(--danger)" : "var(--border)" }}
+                />
+                {errors[f.label] && (
+                  <p style={{ color: "var(--danger)", fontSize: "12px", marginTop: "2px", fontWeight: 600 }}>{errors[f.label]}</p>
+                )}
+              </div>
+            ))}
+
+            <button type="submit" disabled={isSubmitting} className="w-full btn-primary py-3.5 rounded-xl border-none cursor-pointer" style={{ minHeight: "52px", boxShadow: "0 8px 24px rgba(0, 32, 194, 0.2)" }}>
+              {isSubmitting ? "Inscription en cours..." : "S'inscrire"}
             </button>
           </form>
         ) : (
@@ -127,13 +303,13 @@ export function InscriptionPublique() {
               Bienvenue dans la famille !
             </h2>
             <p style={{ color: "var(--gray-600)", fontSize: "14px", lineHeight: "1.6", marginBottom: "20px" }}>
-              {form.prénom}, votre inscription a été reçue avec succès. Que Dieu vous bénisse abondamment !
+              {form.prenom}, votre inscription a été reçue avec succès. Que Dieu vous bénisse abondamment !
             </p>
             <div className="rounded-2xl p-5 mb-6 text-left" style={{ background: "var(--blue-muted)", border: "1px solid var(--border)" }}>
-              <p style={{ fontSize: "13px", color: "var(--gray-600)", marginBottom: "6px", fontWeight: 500 }}>Catégorie : <strong style={{ color: "var(--blue-primary)", fontWeight: 700 }}>{form.catégorie}</strong></p>
-              <p style={{ fontSize: "13px", color: "var(--gray-600)", fontWeight: 500 }}>Téléphone : <strong style={{ color: "var(--blue-deep)", fontWeight: 700 }}>{form.téléphone}</strong></p>
+              <p style={{ fontSize: "13px", color: "var(--gray-600)", marginBottom: "6px", fontWeight: 500 }}>Catégorie : <strong style={{ color: "var(--blue-primary)", fontWeight: 700 }}>{form.categorie}</strong></p>
+              <p style={{ fontSize: "13px", color: "var(--gray-600)", fontWeight: 500 }}>Téléphone : <strong style={{ color: "var(--blue-deep)", fontWeight: 700 }}>{form.telephone}</strong></p>
             </div>
-            <button type="button" onClick={() => { setSubmitted(false); setForm({ nom: "", prénom: "", téléphone: "", catégorie: "Membre" }); }} className="w-full btn-outline py-3.5 rounded-xl text-sm" style={{ border: "2px solid var(--blue-primary)" }}>
+            <button type="button" onClick={() => { setSubmitted(false); setForm({ nom: "", prenom: "", telephone: "", categorie: "Membre" }); }} className="w-full btn-outline py-3.5 rounded-xl text-sm cursor-pointer" style={{ border: "2px solid var(--blue-primary)" }}>
               Nouvelle inscription
             </button>
           </div>

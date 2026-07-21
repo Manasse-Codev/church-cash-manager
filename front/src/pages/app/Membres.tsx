@@ -1,9 +1,8 @@
-import { useState } from "react";
-import { Search, Plus, X, Share2, Copy, CheckCircle, Phone, Calendar, Download } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Plus, X, Share2, Copy, CheckCircle, Phone, Calendar, Download, Trash2 } from "lucide-react";
 import { PageTitle } from "../../components/shared/PageTitle";
-import { MEMBRES } from "../../constants/mockData";
-import type { Membre } from "../../types";
 import { exportToExcel, exportToPDF } from "../../lib/export-utils";
+import { api } from "../../lib/api-client";
 
 const CAT_COLORS: Record<string, { bg: string; text: string }> = {
   Ancien:      { bg: "#EEF3FF", text: "#1B3FA6" },
@@ -24,15 +23,58 @@ const FORM_FIELDS = [
 ];
 
 export function Membres() {
+  const [membres, setMembres] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("Tous");
+  
+  // Modals
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Formulaire configuration publique
+  const [formConfig, setFormConfig] = useState<any>(null);
   const [selectedFields, setSelectedFields] = useState<string[]>(["Nom", "Prénom", "Téléphone", "Catégorie"]);
+  const [isUpdatingConfig, setIsUpdatingConfig] = useState(false);
 
-  const shareLink = `${window.location.origin}/inscription`;
+  // Formulaire création membre manuelle
+  const [nom, setNom] = useState("");
+  const [prenom, setPrenom] = useState("");
+  const [telephone, setTelephone] = useState("");
+  const [categorie, setCategorie] = useState("Membre");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const filtered = MEMBRES.filter((m) => {
+  const fetchMembres = async () => {
+    try {
+      const response = await api.get<any>("/membres");
+      setMembres(response.data || []);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des membres", error);
+    }
+  };
+
+  const fetchFormConfig = async () => {
+    try {
+      const response = await api.get<any>("/membres/form-config");
+      setFormConfig(response.data);
+      if (response.data && response.data.champs) {
+        setSelectedFields(response.data.champs.map((c: any) => c.label));
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération de la config du formulaire", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchMembres();
+    fetchFormConfig();
+  }, []);
+
+  const shareLink = formConfig?.linkToken 
+    ? `${window.location.origin}/inscription?token=${formConfig.linkToken}`
+    : `${window.location.origin}/inscription`;
+
+  const filtered = membres.filter((m) => {
     const q = search.toLowerCase();
     const matchSearch =
       m.nom.toLowerCase().includes(q) ||
@@ -81,10 +123,68 @@ export function Membres() {
     });
   };
 
-  const toggleField = (field: string) => {
-    setSelectedFields((prev) =>
-      prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
-    );
+  const toggleField = async (fieldLabel: string) => {
+    const nextFields = selectedFields.includes(fieldLabel) 
+      ? selectedFields.filter((f) => f !== fieldLabel) 
+      : [...selectedFields, fieldLabel];
+    
+    setSelectedFields(nextFields);
+    
+    // Construire le tableau de champs à envoyer au backend
+    const updatedChamps = FORM_FIELDS.filter(f => f.required || nextFields.includes(f.label));
+    
+    setIsUpdatingConfig(true);
+    try {
+      await api.put("/membres/form-config", {
+        champs: updatedChamps,
+      });
+      // Mettre à jour la config locale
+      setFormConfig((prev: any) => ({
+        ...prev,
+        champs: updatedChamps,
+      }));
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la config du formulaire", error);
+    } finally {
+      setIsUpdatingConfig(false);
+    }
+  };
+
+  const handleCreateMembre = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nom.trim() || !prenom.trim() || !telephone.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.post("/membres", {
+        nom: nom.trim(),
+        prenom: prenom.trim(),
+        telephone: telephone.trim(),
+        categorie,
+      });
+
+      setNom("");
+      setPrenom("");
+      setTelephone("");
+      setCategorie("Membre");
+      setShowAddModal(false);
+      await fetchMembres();
+    } catch (error) {
+      alert("Erreur lors de la création du membre");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Voulez-vous vraiment supprimer ce membre ?")) return;
+
+    try {
+      await api.delete(`/membres/${id}`);
+      await fetchMembres();
+    } catch (error) {
+      alert("Erreur lors de la suppression du membre");
+    }
   };
 
   return (
@@ -92,12 +192,12 @@ export function Membres() {
       {/* Header */}
       <div className="mb-5 flex items-start justify-between gap-3">
         <div>
-          <PageTitle title="Membres" subtitle={`${MEMBRES.length} membres enregistrés dans la base`} />
+          <PageTitle title="Membres" subtitle={`${membres.length} membres enregistrés dans la base`} />
         </div>
         <button
           type="button"
           onClick={() => setShowLinkModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl flex-shrink-0"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl flex-shrink-0 cursor-pointer"
           style={{ background: "#DCFCE7", color: "#16A34A", fontWeight: 700, fontSize: "13px" }}
         >
           <Share2 size={15} />
@@ -125,7 +225,7 @@ export function Membres() {
         <select
           value={catFilter}
           onChange={(e) => setCatFilter(e.target.value)}
-          className="px-3 py-2 rounded-xl outline-none"
+          className="px-3 py-2 rounded-xl outline-none cursor-pointer"
           style={{
             background: "white",
             border: "1.5px solid rgba(27,63,166,0.12)",
@@ -135,7 +235,7 @@ export function Membres() {
           aria-label="Filtrer par catégorie"
         >
           {CATEGORIES.map((c) => (
-            <option key={c}>{c}</option>
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
 
@@ -170,14 +270,14 @@ export function Membres() {
           background: "white",
         }}
       >
-        {filtered.map((m: Membre, i) => {
+        {filtered.map((m: any, i) => {
           const colors = CAT_COLORS[m.catégorie] || { bg: "#E8ECF4", text: "#64748B" };
-          const initials = `${m.prénom[0]}${m.nom[0]}`;
+          const initials = `${m.prénom[0] ?? ""}${m.nom[0] ?? ""}`;
 
           return (
             <div
               key={m.id}
-              className="flex items-center gap-3 px-4 py-3.5"
+              className="flex items-center gap-3 px-4 py-3.5 group"
               style={{ borderBottom: i < filtered.length - 1 ? "1px solid rgba(27,63,166,0.07)" : "none" }}
             >
               {/* Avatar */}
@@ -190,7 +290,7 @@ export function Membres() {
                   fontSize: "14px",
                 }}
               >
-                {initials}
+                {initials.toUpperCase()}
               </div>
 
               <div className="flex-1 min-w-0">
@@ -222,6 +322,15 @@ export function Membres() {
                   </span>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => handleDelete(m.id)}
+                className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-50 rounded-lg text-red-500 transition-all cursor-pointer"
+                title="Supprimer le membre"
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           );
         })}
@@ -236,7 +345,8 @@ export function Membres() {
       {/* FAB */}
       <button
         type="button"
-        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all active:scale-95"
+        onClick={() => setShowAddModal(true)}
+        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all active:scale-95 cursor-pointer"
         style={{
           background: "linear-gradient(135deg, #0D1F5C, #1B3FA6)",
           boxShadow: "0 6px 20px rgba(27,63,166,0.4)",
@@ -274,7 +384,7 @@ export function Membres() {
               >
                 Lien d'inscription
               </h3>
-              <button type="button" onClick={() => setShowLinkModal(false)} aria-label="Fermer la modal">
+              <button type="button" onClick={() => setShowLinkModal(false)} aria-label="Fermer la modal" className="cursor-pointer">
                 <X size={20} style={{ color: "#64748B" }} />
               </button>
             </div>
@@ -289,7 +399,8 @@ export function Membres() {
                   <button
                     key={f.label}
                     type="button"
-                    onClick={() => !f.required && toggleField(f.label)}
+                    disabled={f.required || isUpdatingConfig}
+                    onClick={() => toggleField(f.label)}
                     className="px-3 py-1.5 rounded-xl transition-all"
                     style={{
                       background: selectedFields.includes(f.label) ? "#1B3FA6" : "#E8ECF4",
@@ -339,7 +450,7 @@ export function Membres() {
               <button
                 type="button"
                 onClick={handleCopy}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg flex-shrink-0 transition-all"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg flex-shrink-0 transition-all cursor-pointer"
                 style={{
                   background: copied ? "#DCFCE7" : "#1B3FA6",
                   color: copied ? "#16A34A" : "white",
@@ -357,12 +468,95 @@ export function Membres() {
               href={`https://wa.me/?text=${encodeURIComponent(`Rejoignez notre église ! Inscrivez-vous ici : ${shareLink}`)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full py-3 rounded-xl flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer text-center"
               style={{ background: "#25D366", color: "white", fontWeight: 700, fontSize: "14px", textDecoration: "none" }}
             >
               Partager via WhatsApp
             </a>
           </div>
+        </div>
+      )}
+
+      {/* Add Membre Modal */}
+      {showAddModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
+          style={{ background: "rgba(13,31,92,0.6)" }}
+          onClick={() => setShowAddModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-modal-title"
+        >
+          <form
+            onSubmit={handleCreateMembre}
+            className="w-full max-w-sm rounded-t-3xl md:rounded-3xl p-6"
+            style={{ background: "white" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h3 id="add-modal-title" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, color: "#0D1F5C", fontSize: "18px" }}>
+                Ajouter un membre
+              </h3>
+              <button type="button" onClick={() => setShowAddModal(false)} aria-label="Fermer la modal" className="cursor-pointer">
+                <X size={20} style={{ color: "#64748B" }} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Prénom</label>
+                <input
+                  required
+                  value={prenom}
+                  onChange={(e) => setPrenom(e.target.value)}
+                  placeholder="Prénom du membre"
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Nom</label>
+                <input
+                  required
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder="Nom de famille"
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Téléphone</label>
+                <input
+                  required
+                  value={telephone}
+                  onChange={(e) => setTelephone(e.target.value)}
+                  placeholder="Ex: +2250700000000"
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Catégorie</label>
+                <select
+                  value={categorie}
+                  onChange={(e) => setCategorie(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none cursor-pointer"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                  aria-label="Catégorie du membre"
+                >
+                  {CATEGORIES.filter(c => c !== "Tous").map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <button type="button" onClick={() => setShowAddModal(false)} className="py-3 rounded-xl cursor-pointer" style={{ background: "#E8ECF4", color: "#0D1F5C", fontWeight: 700 }}>Annuler</button>
+                <button type="submit" disabled={isSubmitting} className="py-3 rounded-xl cursor-pointer" style={{ background: "linear-gradient(135deg, #0D1F5C, #1B3FA6)", color: "white", fontWeight: 700 }}>
+                  {isSubmitting ? "Ajout..." : "Ajouter"}
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       )}
     </div>

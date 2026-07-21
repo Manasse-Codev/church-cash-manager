@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Music, Users, Heart, Baby, Book, Shield, Plus, X, ChevronRight } from "lucide-react";
 import { PageTitle } from "../../components/shared/PageTitle";
 import { ProgressBar } from "../../components/shared/ProgressBar";
-import { DEPARTEMENTS } from "../../constants/mockData";
-import type { Departement } from "../../types";
+import { api } from "../../lib/api-client";
 
 const ICON_MAP: Record<string, any> = {
   Music: Music,
@@ -23,11 +22,104 @@ const DEPT_THEMES: Record<string, { bg: string; color: string }> = {
   "Anciens":        { bg: "#F0E8DC", color: "#6B5744" },
 };
 
-export function Departements() {
-  const [selected, setSelected] = useState<number | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
+const ICONS_POOL = ["Music", "Users", "Heart", "Baby", "Book", "Shield"];
 
-  const dept = DEPARTEMENTS.find((d) => d.id === selected);
+export function Departements() {
+  const [departements, setDepartements] = useState<any[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  
+  // Modals
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showMoveModal, setShowMoveModal] = useState(false);
+
+  // Formulaire département
+  const [nom, setNom] = useState("");
+  const [description, setDescription] = useState("");
+  const [budget, setBudget] = useState("");
+  const [membres, setMembres] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Formulaire mouvement département
+  const [moveMotif, setMoveMotif] = useState("");
+  const [moveMontant, setMoveMontant] = useState("");
+  const [moveType, setMoveType] = useState<"dotation" | "depense">("depense");
+  const [isSubmittingMove, setIsSubmittingMove] = useState(false);
+
+  const fetchDepartements = async () => {
+    try {
+      const response = await api.get<any>("/departements");
+      setDepartements(response.data || []);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des départements", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartements();
+  }, []);
+
+  const dept = departements.find((d) => d.id === selectedId);
+
+  const handleCreateDept = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nom.trim() || !description.trim() || !budget || isSubmitting) return;
+
+    setIsSubmitting(true);
+    
+    // Déterminer un thème aléatoire ou par défaut
+    const randomIcon = ICONS_POOL[Math.floor(Math.random() * ICONS_POOL.length)];
+    const randomColor = "#" + Math.floor(Math.random() * 16777215).toString(16);
+    
+    try {
+      await api.post("/departements", {
+        nom: nom.trim(),
+        description: description.trim(),
+        budget: parseFloat(budget),
+        membres: membres ? parseInt(membres) : 0,
+        icon: randomIcon,
+        color: randomColor,
+        bg: randomColor + "15", // Opacité à 8%
+      });
+
+      setNom("");
+      setDescription("");
+      setBudget("");
+      setMembres("");
+      setShowAddModal(false);
+      await fetchDepartements();
+    } catch (error) {
+      alert("Erreur lors de la création du département");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateMove = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedId || !moveMotif.trim() || !moveMontant || isSubmittingMove) return;
+
+    setIsSubmittingMove(true);
+    // Les dépenses du département diminuent le budget (montant négatif), les dotations augmentent (montant positif)
+    const finalAmount = moveType === "depense" ? -Math.abs(parseFloat(moveMontant)) : Math.abs(parseFloat(moveMontant));
+
+    try {
+      await api.post(`/departements/${selectedId}/mouvements`, {
+        motif: moveMotif.trim(),
+        montant: finalAmount,
+        date: new Date().toISOString(),
+      });
+
+      setMoveMotif("");
+      setMoveMontant("");
+      setMoveType("depense");
+      setShowMoveModal(false);
+      await fetchDepartements();
+    } catch (error) {
+      alert("Erreur lors de la création de l'écriture");
+    } finally {
+      setIsSubmittingMove(false);
+    }
+  };
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto">
@@ -38,7 +130,7 @@ export function Departements() {
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl btn-primary"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl btn-primary cursor-pointer"
           style={{ fontSize: "13px" }}
         >
           <Plus size={16} />
@@ -48,18 +140,19 @@ export function Departements() {
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {DEPARTEMENTS.map((d: Departement) => {
+        {departements.map((d: any) => {
           const Icon = ICON_MAP[d.icon] || Book;
-          const pct = Math.round((d.depense / d.budget) * 100);
-          const restant = d.budget - d.depense;
-          const theme = DEPT_THEMES[d.nom] || { bg: "#E8ECF4", color: "#64748B" };
+          const totalSpent = Math.abs(d.solde < 0 ? d.solde : 0);
+          const pct = d.budget > 0 ? Math.round((totalSpent / d.budget) * 100) : 0;
+          const restant = d.budget - totalSpent;
+          const theme = DEPT_THEMES[d.nom] || { bg: d.bg || "#E8ECF4", color: d.color || "#64748B" };
 
           return (
             <button
               key={d.id}
               type="button"
-              onClick={() => setSelected(d.id)}
-              className="text-left rounded-2xl p-4 transition-all hover:shadow-md active:scale-[0.98] card-ad"
+              onClick={() => setSelectedId(d.id)}
+              className="text-left rounded-2xl p-4 transition-all hover:shadow-md active:scale-[0.98] card-ad cursor-pointer"
               style={{
                 background: "white",
               }}
@@ -96,7 +189,7 @@ export function Departements() {
                 <div>
                   <div style={{ fontSize: "10px", color: "#64748B", fontWeight: 700 }}>DÉPENSÉ</div>
                   <div style={{ fontWeight: 700, color: "#DC2626", fontSize: "12px" }}>
-                    {(d.depense / 1000).toFixed(0)}k
+                    {(totalSpent / 1000).toFixed(0)}k
                   </div>
                 </div>
                 <div>
@@ -124,17 +217,25 @@ export function Departements() {
             </button>
           );
         })}
+        {departements.length === 0 && (
+          <div className="col-span-2 text-center py-12 text-gray-500">
+            Aucun département configuré
+          </div>
+        )}
       </div>
 
       {/* Department detail sheet */}
       {dept && (() => {
-        const theme = DEPT_THEMES[dept.nom] || { bg: "#E8ECF4", color: "#64748B" };
+        const theme = DEPT_THEMES[dept.nom] || { bg: dept.bg || "#E8ECF4", color: dept.color || "#64748B" };
         const Icon = ICON_MAP[dept.icon] || Book;
+        const totalSpent = Math.abs(dept.solde < 0 ? dept.solde : 0);
+        const remaining = dept.budget - totalSpent;
+        
         return (
           <div
             className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
             style={{ background: "rgba(13,31,92,0.6)" }}
-            onClick={() => setSelected(null)}
+            onClick={() => setSelectedId(null)}
             role="dialog"
             aria-modal="true"
             aria-labelledby="dept-modal-title"
@@ -171,7 +272,7 @@ export function Departements() {
                     <span style={{ fontSize: "13px", color: "#64748B" }}>{dept.membres} membres</span>
                   </div>
                 </div>
-                <button type="button" onClick={() => setSelected(null)} aria-label="Fermer la modal">
+                <button type="button" onClick={() => setSelectedId(null)} aria-label="Fermer la modal" className="cursor-pointer">
                   <X size={20} style={{ color: "#64748B" }} />
                 </button>
               </div>
@@ -181,8 +282,8 @@ export function Departements() {
                 <div className="grid grid-cols-3 gap-3 mb-5">
                   {[
                     { label: "Budget", value: dept.budget, color: "#0D1F5C" },
-                    { label: "Dépensé", value: dept.depense, color: "#DC2626" },
-                    { label: "Restant", value: dept.budget - dept.depense, color: "#16A34A" },
+                    { label: "Dépensé", value: totalSpent, color: "#DC2626" },
+                    { label: "Restant", value: remaining, color: "#16A34A" },
                   ].map((s) => (
                     <div
                       key={s.label}
@@ -191,7 +292,7 @@ export function Departements() {
                     >
                       <div style={{ fontSize: "10px", color: "#64748B", fontWeight: 700 }}>{s.label}</div>
                       <div style={{ fontWeight: 800, color: s.color, fontSize: "14px", marginTop: "2px" }}>
-                        {(s.value / 1000).toFixed(0)}k
+                        {(s.value).toLocaleString("fr-FR")}
                       </div>
                     </div>
                   ))}
@@ -209,16 +310,18 @@ export function Departements() {
                 >
                   Grand livre
                 </h3>
-                <div className="space-y-2">
-                  {dept.transactions.map((tx, i) => (
+                <div className="space-y-2 max-h-[30vh] overflow-y-auto mb-4">
+                  {(dept.mouvements || []).map((tx: any) => (
                     <div
-                      key={i}
+                      key={tx.id}
                       className="flex items-center justify-between py-3 px-4 rounded-xl"
                       style={{ background: "#EEF3FF" }}
                     >
                       <div>
                         <div style={{ fontWeight: 700, color: "#0D1F5C", fontSize: "14px" }}>{tx.motif}</div>
-                        <div style={{ fontSize: "11px", color: "#64748B", marginTop: "1px" }}>{tx.date}</div>
+                        <div style={{ fontSize: "11px", color: "#64748B", marginTop: "1px" }}>
+                          {new Date(tx.date).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                        </div>
                       </div>
                       <div
                         style={{
@@ -231,11 +334,17 @@ export function Departements() {
                       </div>
                     </div>
                   ))}
+                  {(dept.mouvements || []).length === 0 && (
+                    <div className="text-center py-6 text-xs text-gray-500 italic">
+                      Aucune transaction enregistrée
+                    </div>
+                  )}
                 </div>
 
                 <button
                   type="button"
-                  className="w-full mt-5 py-4 rounded-2xl flex items-center justify-center gap-2 btn-primary"
+                  onClick={() => setShowMoveModal(true)}
+                  className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 btn-primary cursor-pointer"
                   style={{ fontSize: "14px" }}
                 >
                   <Plus size={18} />
@@ -257,7 +366,8 @@ export function Departements() {
           aria-modal="true"
           aria-labelledby="add-dept-title"
         >
-          <div
+          <form
+            onSubmit={handleCreateDept}
             className="w-full max-w-sm rounded-t-3xl md:rounded-3xl p-6"
             style={{ background: "white" }}
             onClick={(e) => e.stopPropagation()}
@@ -266,29 +376,146 @@ export function Departements() {
               <h3 id="add-dept-title" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, color: "#0D1F5C", fontSize: "18px" }}>
                 Nouveau département
               </h3>
-              <button type="button" onClick={() => setShowAddModal(false)} aria-label="Fermer la modal"><X size={20} style={{ color: "#64748B" }} /></button>
+              <button type="button" onClick={() => setShowAddModal(false)} aria-label="Fermer la modal" className="cursor-pointer">
+                <X size={20} style={{ color: "#64748B" }} />
+              </button>
             </div>
             <div className="space-y-3">
-              {[
-                { label: "Nom du département", placeholder: "Ex: Prière" },
-                { label: "Description", placeholder: "Courte description" },
-                { label: "Budget annuel (FCFA)", placeholder: "0" },
-              ].map((f) => (
-                <div key={f.label}>
-                  <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>{f.label}</label>
-                  <input
-                    placeholder={f.placeholder}
-                    className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
-                    style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
-                  />
-                </div>
-              ))}
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Nom du département</label>
+                <input
+                  required
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder="Ex: Chœur, Jeunesse, Prière..."
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Description</label>
+                <input
+                  required
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Courte description"
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Budget annuel (FCFA)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Effectif membres (optionnel)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={membres}
+                  onChange={(e) => setMembres(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3 mt-4">
-                <button type="button" onClick={() => setShowAddModal(false)} className="py-3 rounded-xl" style={{ background: "#E8ECF4", color: "#0D1F5C", fontWeight: 700 }}>Annuler</button>
-                <button type="button" onClick={() => setShowAddModal(false)} className="py-3 rounded-xl" style={{ background: "linear-gradient(135deg, #0D1F5C, #1B3FA6)", color: "white", fontWeight: 700 }}>Créer</button>
+                <button type="button" onClick={() => setShowAddModal(false)} className="py-3 rounded-xl cursor-pointer" style={{ background: "#E8ECF4", color: "#0D1F5C", fontWeight: 700 }}>Annuler</button>
+                <button type="submit" disabled={isSubmitting} className="py-3 rounded-xl cursor-pointer" style={{ background: "linear-gradient(135deg, #0D1F5C, #1B3FA6)", color: "white", fontWeight: 700 }}>
+                  {isSubmitting ? "Création..." : "Créer"}
+                </button>
               </div>
             </div>
-          </div>
+          </form>
+        </div>
+      )}
+
+      {/* Add Move (Ecriture) Modal */}
+      {showMoveModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 backdrop-blur-sm"
+          style={{ background: "rgba(13,31,92,0.6)" }}
+          onClick={() => setShowMoveModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="move-modal-title"
+        >
+          <form
+            onSubmit={handleCreateMove}
+            className="w-full max-w-sm rounded-t-3xl md:rounded-3xl p-6 shadow-2xl"
+            style={{ background: "white" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h3 id="move-modal-title" style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, color: "#0D1F5C", fontSize: "18px" }}>
+                Nouvelle écriture ({dept?.nom})
+              </h3>
+              <button type="button" onClick={() => setShowMoveModal(false)} aria-label="Fermer la modal" className="cursor-pointer">
+                <X size={20} style={{ color: "#64748B" }} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {/* Type toggle */}
+              <div className="flex rounded-xl p-1 mb-4" style={{ background: "#E8ECF4" }}>
+                {(["depense", "dotation"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setMoveType(t)}
+                    className="flex-1 py-2 rounded-lg transition-all capitalize cursor-pointer"
+                    style={{
+                      background: moveType === t ? (t === "dotation" ? "#DCFCE7" : "#FEE2E2") : "transparent",
+                      color: moveType === t ? (t === "dotation" ? "#16A34A" : "#DC2626") : "#64748B",
+                      fontWeight: moveType === t ? 700 : 500,
+                      fontSize: "14px",
+                    }}
+                  >
+                    {t === "dotation" ? "Dotation +" : "Dépense −"}
+                  </button>
+                ))}
+              </div>
+
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Motif</label>
+                <input
+                  required
+                  value={moveMotif}
+                  onChange={(e) => setMoveMotif(e.target.value)}
+                  placeholder="Ex: Achat fournitures, Subvention..."
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: 700, color: "#0D1F5C" }}>Montant (FCFA)</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  value={moveMontant}
+                  onChange={(e) => setMoveMontant(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-4 py-3 rounded-xl mt-1 outline-none"
+                  style={{ background: "#EEF3FF", border: "1.5px solid rgba(27,63,166,0.15)", color: "#0D1F5C", fontSize: "15px" }}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <button type="button" onClick={() => setShowMoveModal(false)} className="py-3 rounded-xl cursor-pointer" style={{ background: "#E8ECF4", color: "#0D1F5C", fontWeight: 700 }}>Annuler</button>
+                <button type="submit" disabled={isSubmittingMove} className="py-3 rounded-xl cursor-pointer" style={{ background: "linear-gradient(135deg, #0D1F5C, #1B3FA6)", color: "white", fontWeight: 700 }}>
+                  {isSubmittingMove ? "Enregistrement..." : "Enregistrer"}
+                </button>
+              </div>
+            </div>
+          </form>
         </div>
       )}
     </div>
