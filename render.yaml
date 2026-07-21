@@ -1,0 +1,45 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# EgliseFinance — Configuration Render.com (hébergement gratuit)
+# ══════════════════════════════════════════════════════════════════════════════
+
+services:
+  # ── API NestJS ──────────────────────────────────────────────────────────────
+  - type: web
+    name: eglise-finance-api
+    runtime: docker
+    dockerfilePath: ./api/Dockerfile
+    dockerContext: ./api
+    plan: free
+    healthCheckPath: /auth
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # À remplir manuellement avec l'URL Neon.tech
+      - key: JWT_SECRET
+        generateValue: true  # Render génère une clé aléatoire
+      - key: JWT_EXPIRES_IN
+        value: "24h"
+      - key: API_PORT
+        value: "4000"
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        sync: false  # À remplir avec l'URL du frontend
+      - key: THROTTLE_TTL
+        value: "60"
+      - key: THROTTLE_LIMIT
+        value: "100"
+
+  # ── Frontend (Site statique) ────────────────────────────────────────────────
+  - type: web
+    name: eglise-finance-front
+    runtime: static
+    buildCommand: cd front && npm ci && npx vite build
+    staticPublishPath: front/dist
+    plan: free
+    envVars:
+      - key: VITE_API_URL
+        sync: false  # À remplir avec l'URL de l'API Render
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
